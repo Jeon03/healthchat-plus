@@ -1,0 +1,97 @@
+### =========================
+### 💡 HealthChat+ Backend
+### Spring Boot + Gradle + IntelliJ + Docker
+### =========================
+
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Spring Boot build artifacts
+target/
+out/
+bin/
+
+# Logs
+*.log
+logs/
+!src/main/resources/static/logs/
+
+# IntelliJ
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+*.class
+
+# STS / Eclipse
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# VSCode
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🔐 Environment & Secrets
+# =========================
+application.yml
+application-local.yml
+application-dev.yml
+application-prod.yml
+application.properties
+.env
+.env.local
+.env.production
+.env.development
+
+# Example templates (safe)
+!application-example.yml
+!.env.example
+
+# =========================
+# 🐳 Docker
+# =========================
+docker-compose.override.yml
+docker-data/
+*.pid
+
+# =========================
+# 🧪 Test Artifacts
+# =========================
+/test-output/
+/reports/
+/coverage/
+
+# =========================
+# 🔄 Cache & Temp
+# =========================
+.cache/
+tmp/
+*.tmp
+*.swp
+
+# =========================
+# ✅ Optional includes
+# =========================
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/resources/
+!**/src/main/**/java/
+!**/src/test/**/java/

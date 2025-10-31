@@ -1,0 +1,80 @@
+### =========================
+### 💡 HealthChat+ Frontend
+### React + Vite + TypeScript + Tailwind + Docker
+### =========================
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+coverage/
+out/
+
+# Environment files (민감정보 절대 업로드 금지)
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+
+# Example environment (예시는 허용)
+!.env.example
+
+# Vite cache
+.vite/
+vite.config.timestamp*
+
+# Editor / OS files
+.vscode/
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.bak
+
+# Firebase (만약 FCM 사용 중이라면)
+firebase-debug.log
+.firebaserc
+firebase.json
+
+# Docker
+docker/
+docker-compose.override.yml
+
+# Tailwind / PostCSS cache
+.pnpm-store/
+postcss.config.cjs
+tailwind.config.cjs
+
+# TypeScript build cache
+*.tsbuildinfo
+
+# Temporary / cache
+tmp/
+.cache/
+*.tmp
+
+# Test artifacts
+jest-html-reporters-*
+*.spec.ts
+*.spec.tsx
+coverage/
