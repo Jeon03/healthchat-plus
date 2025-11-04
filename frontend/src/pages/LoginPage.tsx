@@ -14,12 +14,26 @@ export default function LoginPage() {
     /** ✅ 로그인 */
     const handleLogin = async () => {
         try {
-            const res = await api.post("/api/auth/login", { email, password });
-            toast.success(`✅ 로그인 성공 (${res.data.nickname})`);
+            const res = await api.post("/auth/login", { email, password });
+
+            toast.success(
+                <div className="leading-relaxed text-[15px] font-medium">
+                    로그인 성공! <br />
+                    <span className="text-blue-600">{res.data.nickname}</span> 님, 환영합니다 🎉
+                </div>
+            );
+
             await refreshUser();
-            navigate("/"); // 로그인 후 대시보드 이동
+            setTimeout(() => navigate("/"), 1500);
         } catch (err: any) {
-            toast.error("❌ " + (err.response?.data || "로그인 실패"));
+            const msg = err.response?.data || "로그인 실패";
+
+            toast.error(
+                <div
+                    dangerouslySetInnerHTML={{ __html: msg }}
+                    className="leading-relaxed text-[15px]"
+                />
+            );
         }
     };
 
@@ -116,7 +130,7 @@ export default function LoginPage() {
                 pauseOnHover
                 draggable
                 theme="light"
-                toastClassName="dark:!bg-gray-800 dark:!text-white"
+                toastClassName="!w-[440px] !max-w-[90vw] dark:!bg-gray-800 dark:!text-white !rounded-xl !shadow-md"
             />
         </div>
     );

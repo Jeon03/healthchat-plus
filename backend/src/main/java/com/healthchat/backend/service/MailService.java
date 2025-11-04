@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -16,9 +17,8 @@ public class MailService {
     private final JavaMailSender mailSender;
     private final StringRedisTemplate redisTemplate;
 
-    /**
-     * ✅ 1. 인증 코드 생성 및 이메일 전송
-     */
+    /** ✅ 회원가입 인증코드 발송 (비동기) */
+    @Async("mailExecutor")
     public void sendVerificationCode(String to) {
         // 6자리 인증 코드 생성
         String code = UUID.randomUUID().toString().substring(0, 6).toUpperCase();

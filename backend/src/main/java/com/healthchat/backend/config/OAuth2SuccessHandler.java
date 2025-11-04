@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @RequiredArgsConstructor
@@ -40,6 +40,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     @Value("${app.cookie.same-site:Lax}")
     private String COOKIE_SAME_SITE;
 
+    // ✅ 쿠키 빌더
     private ResponseCookie buildCookie(String name, String value, long maxAge) {
         ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, value)
                 .httpOnly(true)
@@ -66,32 +67,55 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String email = extractEmail(oAuth2User, provider);
         String nickname = extractNickname(oAuth2User, provider);
 
-        AtomicBoolean mergedFlag = new AtomicBoolean(false);
+        // ✅ 기존 사용자 확인
+        User existingUser = userRepository.findByEmail(email).orElse(null);
 
-        //기존 회원 병합 또는 신규 저장
-        User user = userRepository.findByEmail(email)
-                .map(existingUser -> {
-                    if (existingUser.getProvider() == null || existingUser.getProvider().equalsIgnoreCase("local")) {
-                        existingUser.setProvider(provider);
-                        userRepository.save(existingUser);
-                        mergedFlag.set(true);
-                    }
-                    return existingUser;
-                })
-                .orElseGet(() -> userRepository.save(
-                        User.builder()
-                                .email(email)
-                                .nickname(nickname)
-                                .provider(provider)
-                                .password("") // OAuth2 계정은 비밀번호 없음
-                                .build()
-                ));
+        if (existingUser != null) {
+            // ✅ 이미 병합된 동일 provider → 바로 로그인 처리
+            if (existingUser.getProvider() != null && existingUser.getProvider().equalsIgnoreCase(provider)) {
+                issueJwtTokens(response, email);
 
-        //JWT 생성
+                // 세션 초기화 및 인증정보 정리
+                if (request.getSession(false) != null) {
+                    request.getSession(false).invalidate();
+                }
+                SecurityContextHolder.clearContext();
+
+                response.sendRedirect(FRONT + "/?login=success");
+                return;
+            }
+
+            // ✅ provider가 다를 때만 병합 안내로 리디렉션
+            String redirectUrl = String.format("%s/?mergeCandidate=%s&provider=%s", FRONT, email, provider);
+            response.sendRedirect(redirectUrl);
+            return;
+        }
+
+        // ✅ 신규 사용자 → 등록 후 로그인 처리
+        User newUser = User.builder()
+                .email(email)
+                .nickname(nickname)
+                .provider(provider)
+                .password("") // 소셜 로그인은 비밀번호 없음
+                .build();
+        userRepository.save(newUser);
+
+        issueJwtTokens(response, email);
+
+        // ✅ 세션 및 인증정보 완전 초기화
+        if (request.getSession(false) != null) {
+            request.getSession(false).invalidate();
+        }
+        SecurityContextHolder.clearContext();
+
+        response.sendRedirect(FRONT + "/?login=success");
+    }
+
+    // ✅ JWT 토큰 발급 및 쿠키 설정
+    private void issueJwtTokens(HttpServletResponse response, String email) {
         String accessToken = jwtTokenProvider.createAccessToken(email);
         String refreshToken = jwtTokenProvider.createRefreshToken(email);
 
-        //Refresh Token 저장
         refreshTokenRepository.findByEmail(email)
                 .ifPresentOrElse(
                         token -> {
@@ -106,58 +130,31 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                         )
                 );
 
-        //쿠키 설정
         ResponseCookie accessCookie = buildCookie("access_token", accessToken, 60 * 30);
         ResponseCookie refreshCookie = buildCookie("refresh_token", refreshToken, 60L * 60 * 24 * 14);
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
-
-        //세션 완전 제거 (Spring Security 세션 인증 무효화)
-        if (request.getSession(false) != null) {
-            request.getSession(false).invalidate();
-        }
-
-        //명시적 302 Redirect
-        String redirectUrl = mergedFlag.get()
-                ? FRONT + "/?merged=true"
-                : FRONT + "/?login=success";
-
-        response.setStatus(HttpServletResponse.SC_FOUND);
-        response.setHeader("Location", redirectUrl);
     }
 
-    //이메일 추출
+    // ✅ 이메일 추출
     private String extractEmail(DefaultOAuth2User user, String provider) {
         Map<String, Object> attr = user.getAttributes();
-        if ("google".equals(provider)) {
-            return (String) attr.get("email");
-        }
-        if ("naver".equals(provider)) {
-            Map<String, Object> response = (Map<String, Object>) attr.get("response");
-            return (String) response.get("email");
-        }
-        if ("kakao".equals(provider)) {
-            Map<String, Object> kakaoAccount = (Map<String, Object>) attr.get("kakao_account");
-            return (String) kakaoAccount.get("email");
-        }
-        return "unknown@oauth.com";
+        return switch (provider) {
+            case "google" -> (String) attr.get("email");
+            case "naver" -> ((Map<String, Object>) attr.get("response")).get("email").toString();
+            case "kakao" -> ((Map<String, Object>) ((Map<String, Object>) attr.get("kakao_account"))).get("email").toString();
+            default -> "unknown@oauth.com";
+        };
     }
 
-    //닉네임 추출
+    // ✅ 닉네임 추출
     private String extractNickname(DefaultOAuth2User user, String provider) {
         Map<String, Object> attr = user.getAttributes();
-        if ("google".equals(provider)) {
-            return (String) attr.get("name");
-        }
-        if ("naver".equals(provider)) {
-            Map<String, Object> response = (Map<String, Object>) attr.get("response");
-            return (String) response.get("name");
-        }
-        if ("kakao".equals(provider)) {
-            Map<String, Object> kakaoAccount = (Map<String, Object>) attr.get("kakao_account");
-            Map<String, Object> profile = (Map<String, Object>) kakaoAccount.get("profile");
-            return (String) profile.get("nickname");
-        }
-        return "사용자";
+        return switch (provider) {
+            case "google" -> (String) attr.get("name");
+            case "naver" -> ((Map<String, Object>) attr.get("response")).get("name").toString();
+            case "kakao" -> ((Map<String, Object>) ((Map<String, Object>) attr.get("kakao_account")).get("profile")).get("nickname").toString();
+            default -> "사용자";
+        };
     }
 }

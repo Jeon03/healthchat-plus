@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
+import { toast } from "react-toastify";
 import api from "../api/axios";
 
 interface User {
@@ -20,7 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
-    /** ✅ 로그인된 사용자 정보 불러오기 */
     const refreshUser = async () => {
         try {
             const res = await api.get("/user/me", { validateStatus: () => true });
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             setUser(res.data);
-        } catch (err) {
+        } catch {
             setUser(null);
         } finally {
             setLoading(false);
@@ -56,8 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null);
             localStorage.clear();
             sessionStorage.clear();
-            console.log("👋 로그아웃 완료");
+            console.log("로그아웃 완료");
             window.dispatchEvent(new Event("auth-logout"));
+            toast.info("로그아웃 되었습니다.");
         }
     };
 
