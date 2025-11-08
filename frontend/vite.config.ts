@@ -29,28 +29,6 @@ export default defineConfig({
                     changeOrigin: true,
                     secure: false,
                 },
-                "/login": {
-                    target: "http://localhost:8081",
-                    changeOrigin: true,
-                    secure: false,
-                },
-                "/logout": {
-                    target: "http://localhost:8081",
-                    changeOrigin: true,
-                    secure: false,
-                },
-                "/ws": {
-                    target: "http://localhost:8081",
-                    changeOrigin: true,
-                    secure: false,
-                    ws: true,
-                },
-                "/ws-connect": {
-                    target: "http://localhost:8081",
-                    changeOrigin: true,
-                    secure: false,
-                    ws: true,
-                },
             },
         },
     }),

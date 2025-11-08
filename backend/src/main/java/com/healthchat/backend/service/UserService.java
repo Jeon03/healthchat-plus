@@ -1,14 +1,21 @@
 package com.healthchat.backend.service;
 
+
+import com.healthchat.backend.dto.ProfileRequest;
+import com.healthchat.backend.dto.ProfileResponse;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Map;
 
 @Service
@@ -80,4 +87,62 @@ public class UserService {
             return null;
         }
     }
+
+    /** ✅ 이메일 기반 프로필 저장 */
+    @Transactional
+    public void saveProfileByEmail(String email, ProfileRequest dto) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        user.setNickname(dto.getNickname());
+        user.setGender(dto.getGender());
+        user.setBirthDate(dto.getBirthDate());
+        user.setHeight(dto.getHeight());
+        user.setWeight(dto.getWeight());
+        user.setBodyFat(dto.getBodyFat());
+        user.setAllergiesText(dto.getAllergiesText());
+        user.setMedicationsText(dto.getMedicationsText());
+        user.setGoalWeight(dto.getGoalWeight());
+        user.setSleepGoal(dto.getSleepGoal());
+        user.setAvgSleep(dto.getAvgSleep());
+
+        userRepository.save(user);
+    }
+
+    /** ✅ 이메일 기반 프로필 조회 */
+    @Transactional(readOnly = true)
+    public ProfileResponse getProfileByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        // BMI 계산
+        double bmi = 0;
+        if (user.getHeight() != null && user.getWeight() != null) {
+            bmi = user.getWeight() / Math.pow(user.getHeight() / 100.0, 2);
+        }
+
+        // 나이 계산
+        Integer age = null;
+        if (user.getBirthDate() != null) {
+            LocalDate today = LocalDate.now();
+            age = Period.between(user.getBirthDate(), today).getYears();
+        }
+
+        return ProfileResponse.builder()
+                .nickname(user.getNickname())
+                .gender(user.getGender())
+                .age(age)
+                .birthDate(user.getBirthDate())
+                .height(user.getHeight())
+                .weight(user.getWeight())
+                .bmi(Math.round(bmi * 10) / 10.0)
+                .bodyFat(user.getBodyFat())
+                .allergiesText(user.getAllergiesText())
+                .medicationsText(user.getMedicationsText())
+                .goalWeight(user.getGoalWeight())
+                .sleepGoal(user.getSleepGoal())
+                .avgSleep(user.getAvgSleep())
+                .build();
+    }
+
 }

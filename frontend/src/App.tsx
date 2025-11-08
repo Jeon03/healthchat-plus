@@ -8,6 +8,7 @@ import {useEffect, useRef} from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "./api/axios";
+import ProfilePage from "./pages/ProfilePage.tsx";
 
 export default function App() {
     const { user, loading, refreshUser } = useAuth();
@@ -86,20 +87,35 @@ export default function App() {
         <>
             <Layout>
                 <Routes>
-                    {/* ✅ 로그인 필요 페이지 */}
-                    <Route path="/" element={<Dashboard />} />
+                    {/* ✅ 루트 접근 시 /login으로 리다이렉트 */}
+                    <Route path="/" element={<Navigate to="/login" replace />} />
 
-                    {/* ✅ 인증 불필요 페이지 */}
+                    {/* ✅ 로그인 페이지 */}
                     <Route
                         path="/login"
-                        element={user ? <Navigate to="/" replace /> : <LoginPage />}
-                    />
-                    <Route
-                        path="/signup"
-                        element={user ? <Navigate to="/" replace /> : <SignupPage />}
+                        element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />}
                     />
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    {/* ✅ 회원가입 */}
+                    <Route
+                        path="/signup"
+                        element={user ? <Navigate to="/dashboard" replace /> : <SignupPage />}
+                    />
+
+                    {/* ✅ 로그인 이후 접근 가능 */}
+                    <Route
+                        path="/dashboard"
+                        element={user ? <Dashboard /> : <Navigate to="/login" replace />}
+                    />
+
+                    {/* ✅ 프로필 설정 */}
+                    <Route
+                        path="/profile"
+                        element={user ? <ProfilePage /> : <Navigate to="/login" replace />}
+                    />
+
+                    {/* ✅ 예외 처리 */}
+                    <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </Layout>
 

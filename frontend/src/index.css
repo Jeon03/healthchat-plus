@@ -28,3 +28,27 @@ body,
 body {
     @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-300;
 }
+
+
+/* ==============================
+   ✅ 공통 Form Input 스타일
+   ============================== */
+.input {
+    @apply w-full p-3 border border-gray-300 rounded-md
+    bg-white text-gray-900 placeholder-gray-400
+    dark:bg-gray-800 dark:text-gray-100 dark:border-gray-700
+    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+    transition-all duration-200;
+}
+
+/* ✅ 공통 버튼 스타일 */
+.btn-primary {
+    @apply w-full bg-blue-600 text-white py-2 rounded-md
+    hover:bg-blue-700 active:bg-blue-800
+    transition-colors duration-200;
+}
+
+/* ✅ 구분선 */
+.divider {
+    @apply my-4 border-t border-gray-300 dark:border-gray-700;
+}

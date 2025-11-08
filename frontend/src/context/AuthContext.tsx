@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { toast } from "react-toastify";
 import api from "../api/axios";
 
+
 interface User {
     email: string;
     nickname: string;
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.log("로그아웃 완료");
             window.dispatchEvent(new Event("auth-logout"));
             toast.info("로그아웃 되었습니다.");
+            window.location.href = `${window.location.origin}/login`;
         }
     };
 

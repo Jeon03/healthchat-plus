@@ -44,4 +44,35 @@ public class User {
     /** ✅ 생성 시각 */
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+
+    /* =============================================
+       ✅ HealthChat+ 프로필 확장 필드
+       ============================================= */
+
+    /** 키 (cm) */
+    private Double height;
+
+    /** 몸무게 (kg) */
+    private Double weight;
+
+    /** 체지방률 (%) */
+    private Double bodyFat;
+
+    /** 알레르기 정보 (자연어 그대로 저장) */
+    @Column(columnDefinition = "TEXT")
+    private String allergiesText;
+
+    /** 복용 중인 약 정보 (자연어 그대로 저장) */
+    @Column(columnDefinition = "TEXT")
+    private String medicationsText;
+
+    /** 목표 체중 (kg) */
+    private Double goalWeight;
+
+    /** 수면 목표 (시간) */
+    private Double sleepGoal;
+
+    /** 평균 수면 (시간) */
+    private Double avgSleep;
 }
