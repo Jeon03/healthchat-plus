@@ -52,3 +52,14 @@ body {
 .divider {
     @apply my-4 border-t border-gray-300 dark:border-gray-700;
 }
+/* Chrome, Safari, Edge, Opera — number input 화살표 제거 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox — number input 화살표 제거 */
+input[type="number"] {
+    -moz-appearance: textfield;
+}

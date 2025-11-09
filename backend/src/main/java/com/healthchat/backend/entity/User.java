@@ -35,20 +35,15 @@ public class User {
     @Column(nullable = false)
     private String provider;
 
-    /** ✅ 성별 (자체 회원가입 시 입력받음) */
+    /** ✅ 성별 */
     private String gender;
 
-    /** ✅ 생년월일 (자체 회원가입 시 입력받음) */
+    /** ✅ 생년월일 */
     private LocalDate birthDate;
 
     /** ✅ 생성 시각 */
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-
-    /* =============================================
-       ✅ HealthChat+ 프로필 확장 필드
-       ============================================= */
 
     /** 키 (cm) */
     private Double height;
@@ -56,23 +51,25 @@ public class User {
     /** 몸무게 (kg) */
     private Double weight;
 
-    /** 체지방률 (%) */
-    private Double bodyFat;
+    /** ✅ 목표 체중 (kg) */
+    private Double goalWeight;
 
-    /** 알레르기 정보 (자연어 그대로 저장) */
+    /** ✅ 평균 수면 시간 (시간) */
+    private Double avgSleep;
+
+    /** ✅ 알레르기 정보 (자연어 그대로 저장) */
     @Column(columnDefinition = "TEXT")
     private String allergiesText;
 
-    /** 복용 중인 약 정보 (자연어 그대로 저장) */
+    /** ✅ 복용 중인 약 정보 (자연어 그대로 저장) */
     @Column(columnDefinition = "TEXT")
     private String medicationsText;
 
-    /** 목표 체중 (kg) */
-    private Double goalWeight;
+    /** ✅ 사용자의 목표 + 세부 요인 구조 (JSON 형태) */
+    @Column(columnDefinition = "TEXT")
+    private String goalsDetailJson;
 
-    /** 수면 목표 (시간) */
-    private Double sleepGoal;
-
-    /** 평균 수면 (시간) */
-    private Double avgSleep;
+    /** ✅ 사용자가 직접 작성한 자유 목표 문장 */
+    @Column(columnDefinition = "TEXT")
+    private String goalText;
 }

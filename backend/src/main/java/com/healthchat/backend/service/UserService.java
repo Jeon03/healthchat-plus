@@ -94,34 +94,41 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        // ✅ 기본 정보
         user.setNickname(dto.getNickname());
         user.setGender(dto.getGender());
-        user.setBirthDate(dto.getBirthDate());
+
+        if (dto.getBirthDate() != null) {
+            user.setBirthDate(dto.getBirthDate());
+        }
+
+        // ✅ 신체 및 건강 정보
         user.setHeight(dto.getHeight());
         user.setWeight(dto.getWeight());
-        user.setBodyFat(dto.getBodyFat());
+        user.setGoalWeight(dto.getGoalWeight());
+        user.setAvgSleep(dto.getAvgSleep());
         user.setAllergiesText(dto.getAllergiesText());
         user.setMedicationsText(dto.getMedicationsText());
-        user.setGoalWeight(dto.getGoalWeight());
-        user.setSleepGoal(dto.getSleepGoal());
-        user.setAvgSleep(dto.getAvgSleep());
+
+        // ✅ 목표 관련 (GoalModal)
+        user.setGoalsDetailJson(dto.getGoalsDetailJson());
+        user.setGoalText(dto.getGoalText());
 
         userRepository.save(user);
     }
 
-    /** ✅ 이메일 기반 프로필 조회 */
     @Transactional(readOnly = true)
     public ProfileResponse getProfileByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        // BMI 계산
-        double bmi = 0;
-        if (user.getHeight() != null && user.getWeight() != null) {
-            bmi = user.getWeight() / Math.pow(user.getHeight() / 100.0, 2);
+        // ✅ BMI 계산
+        Double bmi = null;
+        if (user.getHeight() != null && user.getWeight() != null && user.getHeight() > 0) {
+            bmi = Math.round(user.getWeight() / Math.pow(user.getHeight() / 100.0, 2) * 10) / 10.0;
         }
 
-        // 나이 계산
+        // ✅ 나이 계산
         Integer age = null;
         if (user.getBirthDate() != null) {
             LocalDate today = LocalDate.now();
@@ -131,17 +138,17 @@ public class UserService {
         return ProfileResponse.builder()
                 .nickname(user.getNickname())
                 .gender(user.getGender())
-                .age(age)
                 .birthDate(user.getBirthDate())
+                .age(age)
                 .height(user.getHeight())
                 .weight(user.getWeight())
-                .bmi(Math.round(bmi * 10) / 10.0)
-                .bodyFat(user.getBodyFat())
+                .bmi(bmi)
                 .allergiesText(user.getAllergiesText())
                 .medicationsText(user.getMedicationsText())
                 .goalWeight(user.getGoalWeight())
-                .sleepGoal(user.getSleepGoal())
                 .avgSleep(user.getAvgSleep())
+                .goalsDetailJson(user.getGoalsDetailJson())
+                .goalText(user.getGoalText())
                 .build();
     }
 
