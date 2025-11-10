@@ -107,26 +107,39 @@ export default function ProfilePage() {
     };
 
     const handleGoalSave = (details: any[], text: string) => {
-        console.log("🎯 목표 저장됨 (기존 + 새로운):", details, text);
+        console.log("🎯 목표 저장됨 (새로운 details):", details, text);
 
-        // ✅ "기타 (직접 입력)"은 단일 항목으로 취급
+        const weightGoals = ["체중 감량", "체중 유지", "체중 증가"];
         const hasCustomGoal = details.some((d) => d.goal === "기타 (직접 입력)");
-        let mergedDetails = details;
 
-        // ✅ 기존에 있던 기타는 제거 (중복 방지)
+        // 1️⃣ '기타' 단독 처리
         if (hasCustomGoal) {
-            mergedDetails = details.filter((d) => d.goal === "기타 (직접 입력)");
-        } else {
-            mergedDetails = details.filter((d) => d.goal !== "기타 (직접 입력)");
+            setGoalDetails([{ goal: "기타 (직접 입력)", factors: [text] }]);
+            setGoalText(text);
+            setIsGoalModalOpen(false);
+            return;
         }
 
-        // ✅ 상태 업데이트
-        setGoalDetails(mergedDetails);
-        setGoalText(hasCustomGoal ? text : "");
+        // 2️⃣ 체중 관련 목표는 1개만
+        const uniqueWeight = details.filter((d) => weightGoals.includes(d.goal));
+        const weightGoal = uniqueWeight.length > 0 ? [uniqueWeight[0]] : [];
+
+        // 3️⃣ 일반 목표
+        const normalGoals = details.filter(
+            (d) => !weightGoals.includes(d.goal) && d.goal !== "기타 (직접 입력)"
+        );
+
+        // 4️⃣ 최종 병합 (체중 1개 + 일반 ≤3개)
+        const merged = [...weightGoal, ...normalGoals].slice(0, 3);
+
+        // 5️⃣ 상태 업데이트
+        setGoalDetails(merged);
+        setGoalText("");
         setIsGoalModalOpen(false);
 
-        console.log("🧩 병합 후 최종 details:", mergedDetails);
+        console.log("✅ 최종 저장된 goalDetails:", merged);
     };
+
 
     /** ✅ 프로필 저장 */
     const handleSubmit = async (e: React.FormEvent) => {
@@ -158,33 +171,34 @@ export default function ProfilePage() {
         }
     };
 
-    /** ✅ 목표 선택 로직 (기타·체중 관련·일반 목표 모두 처리) */
     const toggleGoal = (goal: string) => {
         const weightGoals = ["체중 감량", "체중 유지", "체중 증가"];
 
-        // ✅ 1️⃣ '기타 (직접 입력)' 선택 시 — 단독 토글
+        // ✅ 1️⃣ 기타 (직접 입력)
         if (goal === "기타 (직접 입력)") {
             if (selectedGoals.includes("기타 (직접 입력)")) {
                 // 이미 선택된 경우 → 해제
                 setSelectedGoals([]);
             } else {
-                // 새로 선택 → 다른 목표 전부 해제
+                // 새로 선택 → 다른 모든 목표 해제 후 단독 선택
                 setSelectedGoals(["기타 (직접 입력)"]);
             }
             return;
         }
 
-        // ✅ 2️⃣ '기타'가 선택된 상태에서 다른 목표 클릭 → 기타 해제
+        // ✅ 2️⃣ 기타가 이미 선택된 상태에서 일반 목표 클릭 → 기타 해제 후 일반 목표 선택
         if (selectedGoals.includes("기타 (직접 입력)")) {
             setSelectedGoals([goal]);
             return;
         }
 
-        // ✅ 3️⃣ 체중 관련(감량·유지·증가) 중 하나만 선택 가능
+        // ✅ 3️⃣ 체중 관련 목표 (감량·유지·증가)는 하나만 선택 가능
         if (weightGoals.includes(goal)) {
-            const filtered = selectedGoals.filter((g) => !weightGoals.includes(g));
+            const filtered = selectedGoals.filter(
+                (g) => !weightGoals.includes(g)
+            );
             if (selectedGoals.includes(goal)) {
-                // 이미 선택된 체중 목표 클릭 → 해제
+                // 이미 선택된 체중 목표 다시 클릭 시 해제
                 setSelectedGoals(filtered);
             } else {
                 // 새로운 체중 목표 선택
@@ -193,15 +207,16 @@ export default function ProfilePage() {
             return;
         }
 
-        // ✅ 4️⃣ 일반 목표 (최대 3개 제한, 토글 가능)
-        setSelectedGoals((prev) =>
-            prev.includes(goal)
-                ? prev.filter((g) => g !== goal) // 다시 클릭하면 해제
-                : prev.length < 3
-                    ? [...prev, goal] // 최대 3개까지만 선택
-                    : prev
-        );
+        // ✅ 4️⃣ 일반 목표 (최대 3개 제한, 다시 클릭 시 해제)
+        if (selectedGoals.includes(goal)) {
+            // 다시 클릭 시 해제
+            setSelectedGoals(selectedGoals.filter((g) => g !== goal));
+        } else if (selectedGoals.length < 3) {
+            // 3개 이하일 때 추가 가능
+            setSelectedGoals([...selectedGoals, goal]);
+        }
     };
+
 
     const handleNext = () => setStep("detail");
 
@@ -225,7 +240,7 @@ export default function ProfilePage() {
     return (
         <div className="px-6 py-10 max-w-xl mx-auto">
             <h2 className="text-3xl font-bold mb-10 text-gray-800 dark:text-gray-100">
-                🧍 프로필 설정
+                프로필 설정
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -373,25 +388,35 @@ export default function ProfilePage() {
                 )}
 
                 {/* ✅ 버튼 영역 */}
-                <div className="flex justify-end gap-3 mt-8">
+                <div className="mt-8">
                     <button
                         type="button"
                         onClick={() => setIsGoalModalOpen(true)}
-                        className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                        className="w-full px-5 py-3 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition mb-4"
                     >
-                        🎯 목표 설정하기
+                        목표 설정하기
                     </button>
-                    <button
-                        type="submit"
-                        disabled={isSaveDisabled}
-                        className={`px-6 py-2 rounded-md transition ${
-                            isSaveDisabled
-                                ? "bg-gray-400 text-white cursor-not-allowed"
-                                : "bg-blue-600 text-white hover:bg-blue-700"
-                        }`}
-                    >
-                        저장하기
-                    </button>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => navigate("/dashboard")}
+                            className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
+                        >
+                            취소
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={isSaveDisabled}
+                            className={`px-5 py-2 rounded-md font-medium transition ${
+                                isSaveDisabled
+                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                            }`}
+                        >
+                            저장하기
+                        </button>
+                    </div>
                 </div>
             </form>
 

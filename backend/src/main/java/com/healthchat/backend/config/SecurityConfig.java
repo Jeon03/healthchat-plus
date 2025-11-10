@@ -1,6 +1,5 @@
 package com.healthchat.backend.config;
 
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +10,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 @Configuration
 @RequiredArgsConstructor
@@ -29,7 +27,10 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                // CSRF 비활성화 + CORS 활성화
+                // ✅ CORS 활성화 추가
+                .cors(Customizer.withDefaults()) // 🔥 CorsConfig와 연동
+
+                // CSRF 비활성화 + 세션 비사용
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
@@ -44,16 +45,18 @@ public class SecurityConfig {
                                 "/api/auth/**",   // 로그인, 회원가입, 인증 API
                                 "/oauth2/**",     // 소셜 로그인
                                 "/login",         // React 라우트
-                                "/signup"         // React 라우트
+                                "/signup",        // React 라우트
+                                "/api/chat/**",
+                                "/api/ai/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
 
-
+                // 로그인/로그아웃 비활성화
                 .formLogin(form -> form.disable())
-
                 .logout(logout -> logout.disable())
 
+                // ✅ OAuth2 로그인
                 .oauth2Login(oauth -> oauth
                         .authorizationEndpoint(authorization -> authorization.baseUri("/oauth2/authorization"))
                         .redirectionEndpoint(redir -> redir.baseUri("/login/oauth2/code/*"))
@@ -61,10 +64,9 @@ public class SecurityConfig {
                         .loginPage("/")
                 )
 
-                // JWT 필터 등록
+                // ✅ JWT 필터 등록
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
 }

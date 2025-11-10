@@ -193,7 +193,6 @@ export default function GoalModal({
                                     )}
                                 </AnimatePresence>
 
-                                {/* ✅ 일반 목표 선택 시 다음 버튼 표시 */}
                                 {!selectedGoals.includes("기타 (직접 입력)") && (
                                     <div className="flex justify-end gap-3 mt-6">
                                         <motion.button
@@ -204,9 +203,14 @@ export default function GoalModal({
                                             취소
                                         </motion.button>
                                         <motion.button
-                                            whileTap={{ scale: 0.97 }}
+                                            whileTap={{ scale: selectedGoals.length > 0 ? 0.97 : 1 }}
+                                            disabled={selectedGoals.length === 0}
                                             onClick={handleNext}
-                                            className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                                            className={`px-5 py-2 rounded-md transition font-medium ${
+                                                selectedGoals.length === 0
+                                                    ? "bg-gray-400 text-white cursor-not-allowed"
+                                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                            }`}
                                         >
                                             다음
                                         </motion.button>
@@ -233,7 +237,12 @@ export default function GoalModal({
                                     existingDetails={existingDetails}
                                     onBack={() => setStep("main")}
                                     onClose={onClose}
-                                    onSave={(details) => onSave(details, customGoal)}
+                                    onSave={(updatedDetails) => {
+                                        const filtered = updatedDetails.filter((d) =>
+                                            selectedGoals.includes(d.goal)
+                                        );
+                                        onSave(filtered, customGoal);
+                                    }}
                                 />
                             </motion.div>
                         )}

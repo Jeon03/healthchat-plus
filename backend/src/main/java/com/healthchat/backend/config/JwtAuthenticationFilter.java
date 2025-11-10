@@ -36,11 +36,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String email = jwtTokenProvider.getEmail(token);
                 var userDetails = userDetailsService.loadUserByUsername(email);
 
+                // ✅ CustomUserDetails를 principal로 넣어야 컨트롤러에서 @AuthenticationPrincipal 사용 가능
                 var authToken = new UsernamePasswordAuthenticationToken(
-                        email, // 👈 핵심: 이제 authentication.getName() == email
+                        userDetails, // ✅ principal: CustomUserDetails
                         null,
                         userDetails.getAuthorities()
                 );
+
+
+//                var authToken = new UsernamePasswordAuthenticationToken(
+//                        email, // 👈 핵심: 이제 authentication.getName() == email
+//                        null,
+//                        userDetails.getAuthorities()
+//                );
+
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }

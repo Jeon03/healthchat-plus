@@ -6,6 +6,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
+import java.util.List;
+
 @Configuration
 public class CorsConfig {
 
@@ -13,18 +15,15 @@ public class CorsConfig {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
-
-        config.addAllowedOrigin("http://localhost:5173"); // Vite 기본 포트
-        // config.addAllowedOrigin("https://healthchatplus.com"); // 배포 시 도메인 추가
-
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        config.setAllowCredentials(true);
+        config.setAllowCredentials(true); // ✅ 쿠키 포함 허용
+        config.setAllowedOriginPatterns(List.of("http://localhost:5173")); // ✅ addAllowedOrigin → addAllowedOriginPatterns 로 교체
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setExposedHeaders(List.of("Authorization")); // JWT 헤더 노출 (필요 시)
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return new CorsFilter(source);
     }
 }
