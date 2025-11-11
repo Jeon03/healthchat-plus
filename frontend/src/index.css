@@ -63,3 +63,28 @@ input[type="number"]::-webkit-inner-spin-button {
 input[type="number"] {
     -moz-appearance: textfield;
 }
+
+@layer base {
+    input, textarea, select {
+        @apply bg-white dark:bg-gray-700
+        text-gray-900 dark:text-gray-100
+        placeholder-gray-400 dark:placeholder-gray-400
+        border border-gray-300 dark:border-gray-600
+        rounded-md px-2 py-1
+        focus:outline-none
+        focus:ring-2 focus:ring-green-400
+        focus:ring-offset-1
+        focus:ring-offset-white dark:focus:ring-offset-gray-900
+        transition;
+    }
+
+    /* ✅ 숫자 입력 화살표 제거 (옵션) */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+}

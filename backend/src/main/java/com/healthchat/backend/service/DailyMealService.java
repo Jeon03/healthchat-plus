@@ -1,113 +1,142 @@
 package com.healthchat.backend.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthchat.backend.dto.DailyAnalysis;
 import com.healthchat.backend.dto.FoodItem;
+import com.healthchat.backend.dto.MealEntry;
 import com.healthchat.backend.entity.DailyMeal;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.DailyMealRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class DailyMealService {
 
     private final DailyMealRepository dailyMealRepository;
-    private final EdamamService edamamService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DailyMeal saveDailyMeal(User user, DailyAnalysis analysis) {
-        double totalKcal = 0;
-        double totalProtein = 0;
-        double totalFat = 0;
-        double totalCarbs = 0;
 
-        for (var meal : analysis.getMeals()) {
-            for (FoodItem food : meal.getFoods()) {
-                String query = food.getQuantity() + " " + food.getUnit() + " " + food.getName();
-                Map<String, Object> res = edamamService.getNutrition(query);
-
-                try {
-                    // ✅ nutrients 파싱
-                    List<Map<String, Object>> ingredients = (List<Map<String, Object>>) res.get("ingredients");
-                    if (ingredients == null || ingredients.isEmpty()) continue;
-
-                    List<Map<String, Object>> parsedList =
-                            (List<Map<String, Object>>) ingredients.get(0).get("parsed");
-                    if (parsedList == null || parsedList.isEmpty()) continue;
-
-                    Map<String, Map<String, Object>> nutrients =
-                            (Map<String, Map<String, Object>>) parsedList.get(0).get("nutrients");
-                    if (nutrients == null) continue;
-
-                    double kcal = getQuantity(nutrients, "ENERC_KCAL");
-                    double protein = getQuantity(nutrients, "PROCNT");
-                    double fat = getQuantity(nutrients, "FAT");
-                    double carbs = getQuantity(nutrients, "CHOCDF");
-
-                    // ✅ 개별 음식 정보에 반영
-                    food.setCalories(kcal);
-                    food.setProtein(protein);
-                    food.setFat(fat);
-                    food.setCarbs(carbs);
-
-                    System.out.printf("🍱 [영양요약] %s → %.1f kcal | 단백질 %.1fg | 지방 %.1fg | 탄수화물 %.1fg%n",
-                            query, kcal, protein, fat, carbs);
-
-                    // ✅ 총합 누적
-                    totalKcal += kcal;
-                    totalProtein += protein;
-                    totalFat += fat;
-                    totalCarbs += carbs;
-
-                } catch (Exception e) {
-                    System.err.println("❌ Edamam 파싱 실패 (" + query + "): " + e.getMessage());
-                }
-            }
-        }
-
-        // ✅ 합계 출력
-        System.out.printf("✅ 총합 → %.1f kcal | 단백질 %.1fg | 지방 %.1fg | 탄수화물 %.1fg%n",
-                totalKcal, totalProtein, totalFat, totalCarbs);
-
-        // ✅ DB 저장
-        String mealsJson;
-        try {
-            mealsJson = objectMapper.writeValueAsString(analysis.getMeals());
-        } catch (Exception e) {
-            throw new RuntimeException("식단 JSON 직렬화 실패", e);
-        }
-
+    /** ✅ 오늘 식단 조회 */
+    public DailyMeal getTodayMeal(User user) {
         LocalDate today = LocalDate.now();
+        return dailyMealRepository.findByUserIdAndDate(user.getId(), today).orElse(null);
+    }
+
+    /** ✅ 특정 날짜 식단 조회 (옵션) */
+    public DailyMeal getMealByDate(User user, LocalDate date) {
+        return dailyMealRepository.findByUserIdAndDate(user.getId(), date).orElse(null);
+    }
+
+
+    public DailyMeal saveDailyMeal(User user, DailyAnalysis analysis) {
+        LocalDate today = LocalDate.now();
+
+        // ✅ 오늘 날짜의 기존 식단 기록 조회 (없으면 새로 생성)
         DailyMeal meal = dailyMealRepository.findByUserIdAndDate(user.getId(), today)
                 .orElse(DailyMeal.builder()
                         .user(user)
                         .date(today)
+                        .totalCalories(0.0)
+                        .totalProtein(0.0)
+                        .totalFat(0.0)
+                        .totalCarbs(0.0)
                         .build());
 
-        meal.setMealsJson(mealsJson);
+        // ✅ 기존 식단 파싱
+        List<MealEntry> meals = new ArrayList<>();
+        if (meal.getMealsJson() != null && !meal.getMealsJson().isBlank()) {
+            try {
+                meals = objectMapper.readValue(meal.getMealsJson(), new TypeReference<>() {});
+            } catch (Exception e) {
+                System.err.println("⚠️ 기존 식단 JSON 파싱 실패: " + e.getMessage());
+            }
+        }
+
+        // ✅ action에 따라 분기
+        String action = analysis.getAction() == null ? "add" : analysis.getAction();
+        String target = analysis.getTargetMeal();
+
+        switch (action) {
+            case "update" -> {
+                System.out.println("✏️ 식단 수정 감지 → " + target);
+                if (target != null) {
+                    // 같은 끼니 제거 후 새 식단 추가
+                    meals.removeIf(m -> m.getTime().equals(target));
+                }
+                meals.addAll(analysis.getMeals());
+            }
+            case "delete" -> {
+                System.out.println("🗑️ 식단 삭제 감지 → " + target);
+                if (target != null) {
+                    meals.removeIf(m -> m.getTime().equals(target));
+                }
+            }
+            default -> { // add
+                System.out.println("➕ 식단 추가 감지");
+                meals.addAll(analysis.getMeals());
+            }
+        }
+
+// ✅ 안전한 합계 계산
+        double totalKcal = 0, totalProtein = 0, totalFat = 0, totalCarbs = 0;
+        for (MealEntry m : meals) {
+            for (FoodItem f : m.getFoods()) {
+                totalKcal += f.getCalories() != null ? f.getCalories() : 0;
+                totalProtein += f.getProtein() != null ? f.getProtein() : 0;
+                totalFat += f.getFat() != null ? f.getFat() : 0;
+                totalCarbs += f.getCarbs() != null ? f.getCarbs() : 0;
+            }
+        }
+
+        // ✅ 직렬화 후 저장
+        try {
+            meal.setMealsJson(objectMapper.writeValueAsString(meals));
+        } catch (Exception e) {
+            throw new RuntimeException("식단 JSON 직렬화 실패", e);
+        }
+
         meal.setTotalCalories(totalKcal);
         meal.setTotalProtein(totalProtein);
         meal.setTotalFat(totalFat);
         meal.setTotalCarbs(totalCarbs);
 
         DailyMeal saved = dailyMealRepository.save(meal);
-        System.out.printf("✅ DailyMeal 저장 완료 (user:%d / %s) → %.1f kcal%n",
-                user.getId(), today, totalKcal);
+
+        System.out.printf("✅ [%s] 처리 완료 (user:%d / %s)%n", action, user.getId(), today);
+        System.out.printf("총합 → %.1f kcal | P: %.1f | F: %.1f | C: %.1f%n",
+                totalKcal, totalProtein, totalFat, totalCarbs);
 
         return saved;
     }
 
-    private double getQuantity(Map<String, Map<String, Object>> map, String key) {
-        if (map != null && map.containsKey(key)) {
-            Object q = map.get(key).get("quantity");
-            if (q instanceof Number) return ((Number) q).doubleValue();
-        }
-        return 0.0;
+    @Transactional
+    public DailyMeal saveOrUpdateManual(User user, DailyMeal updated) {
+        // ✅ date 필드가 LocalDate라면 parse() 불필요
+        LocalDate date = updated.getDate() != null ? updated.getDate() : LocalDate.now();
+
+        // ✅ 기존 데이터 조회 (있으면 수정, 없으면 새로 생성)
+        DailyMeal meal = dailyMealRepository.findByUserIdAndDate(user.getId(), date)
+                .orElse(DailyMeal.builder()
+                        .user(user)
+                        .date(date)
+                        .build());
+
+        // ✅ 필드 교체
+        meal.setMealsJson(updated.getMealsJson());
+        meal.setTotalCalories(updated.getTotalCalories());
+        meal.setTotalProtein(updated.getTotalProtein());
+        meal.setTotalFat(updated.getTotalFat());
+        meal.setTotalCarbs(updated.getTotalCarbs());
+
+        return dailyMealRepository.save(meal);
     }
+
 }

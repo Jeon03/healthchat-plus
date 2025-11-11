@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext";
-import { Moon, Sun } from "lucide-react";
+import {Link} from "react-router-dom";
+import {useAuth} from "../../context/AuthContext";
+import {useTheme} from "../../context/ThemeContext";
+import {Moon, Sun} from "lucide-react";
 
 export default function Header() {
     const { user, logout } = useAuth();

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import {useState} from "react";
 import ChatMessage from "./ChatMessage";
 import ChatInput from "./ChatInput";
 import api from "../../api/axios";
@@ -21,6 +21,8 @@ interface Meal {
 }
 
 interface DailyAnalysis {
+    action?: "add" | "update" | "delete";
+    targetMeal?: string;
     meals: Meal[];
     totalCalories: number;
     totalProtein: number;
@@ -56,6 +58,14 @@ export default function ChatContainer() {
             const res = await api.post<DailyAnalysis>("/ai/meals", { text: userText });
             const data = res.data;
 
+            // ✅ AI의 액션 피드백
+            const actionText =
+                data.action === "update"
+                    ? "✏️ 기존 식단이 수정되었어요!"
+                    : data.action === "delete"
+                        ? "🗑️ 일부 식단이 삭제되었어요!"
+                        : "🍽️ 새로운 식단이 추가되었어요!";
+
             // ✅ 총합 요약
             const summary = `🍱 오늘의 식단 분석 결과\n\n총 섭취 칼로리: ${safe(
                 data.totalCalories,
@@ -67,14 +77,17 @@ export default function ChatContainer() {
             // ✅ 상세 식단 목록
             const mealDetails = (data.meals ?? [])
                 .map((meal) => {
-                    const mealName =
-                        meal.time === "breakfast"
-                            ? "🥣 아침"
-                            : meal.time === "lunch"
-                                ? "🍛 점심"
-                                : meal.time === "dinner"
-                                    ? "🍽️ 저녁"
-                                    : "🍪 간식";
+                    const mealNameMap: Record<string, string> = {
+                        breakfast: "🥣 아침",
+                        아침: "🥣 아침",
+                        lunch: "🍛 점심",
+                        점심: "🍛 점심",
+                        dinner: "🍽️ 저녁",
+                        저녁: "🍽️ 저녁",
+                        snack: "🍪 간식",
+                        간식: "🍪 간식",
+                    };
+                    const mealName = mealNameMap[meal.time] || "🍪 간식";
 
                     const foodLines = (meal.foods ?? [])
                         .map(
@@ -82,9 +95,7 @@ export default function ChatContainer() {
                                 `- ${f.name} (${safe(f.quantity, 0)}${f.unit}) → ${safe(
                                     f.calories,
                                     0
-                                )} kcal, P:${safe(f.protein)}g F:${safe(f.fat)}g C:${safe(
-                                    f.carbs
-                                )}g`
+                                )} kcal, P:${safe(f.protein)}g F:${safe(f.fat)}g C:${safe(f.carbs)}g`
                         )
                         .join("\n");
 
@@ -92,12 +103,10 @@ export default function ChatContainer() {
                 })
                 .join("\n\n");
 
-            const reply: Message = {
-                role: "ai",
-                text: `${summary}\n\n${mealDetails}`,
-            };
+            // ✅ 응답 메시지 구성
+            const replyText = `${actionText}\n\n${summary}\n\n${mealDetails}`;
 
-            setMessages((prev) => [...prev, reply]);
+            setMessages((prev) => [...prev, { role: "ai", text: replyText }]);
         } catch (err) {
             console.error(err);
             setMessages((prev) => [
@@ -108,7 +117,6 @@ export default function ChatContainer() {
             setLoading(false);
         }
     };
-
 
     return (
         <div className="flex flex-col w-full max-w-lg mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 h-[600px]">

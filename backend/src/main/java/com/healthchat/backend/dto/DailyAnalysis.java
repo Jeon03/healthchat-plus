@@ -12,9 +12,12 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DailyAnalysis {
-    private List<MealEntry> meals;      // 아침/점심/저녁
-    private Double totalCalories;       // 총 칼로리
-    private Double totalProtein;        // 총 단백질
-    private Double totalFat;            // 총 지방
-    private Double totalCarbs;          // 총 탄수화물
+    private String action;        // add | update | delete
+    private String targetMeal;    // 아침 | 점심 | 저녁 | 간식
+    private List<MealEntry> meals;
+
+    private double totalCalories;
+    private double totalProtein;
+    private double totalFat;
+    private double totalCarbs;
 }

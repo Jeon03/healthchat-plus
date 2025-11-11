@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import {useCallback, useState} from "react";
+import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/axios";
-import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import {useAuth} from "../context/AuthContext";
+import {useNavigate} from "react-router-dom";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");

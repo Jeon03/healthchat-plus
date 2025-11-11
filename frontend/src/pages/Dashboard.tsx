@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import {useEffect, useState} from "react";
 import api from "../api/axios";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import ChatContainer from "../components/chat/ChatContainer";
+import {Link} from "react-router-dom";
+import {motion} from "framer-motion";
 
-// 🔹 성별 아이콘 import
+import ChatContainer from "../components/chat/ChatContainer";
+import DashboardMealCard from "../components/meal/DashboardMealCard";
+
+
 import maleIcon from "../assets/icons/male.svg";
 import femaleIcon from "../assets/icons/female.svg";
 import otherIcon from "../assets/icons/other.svg";
@@ -27,7 +29,6 @@ export default function Dashboard() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [goalDetails, setGoalDetails] = useState<{ goal: string; factors: string[] }[]>([]);
     const [profileLoading, setProfileLoading] = useState(true);
-
 
     useEffect(() => {
         document.title = "HealthChat+ 대시보드";
@@ -239,21 +240,23 @@ export default function Dashboard() {
 
             {/* ✅ 건강 데이터 카드들 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                    { title: "🏃 운동 기록", color: "text-blue-400", content: "오늘 총 7,824보 걸음 / 45분 운동" },
-                    { title: "🥗 식단 요약", color: "text-green-400", content: "단백질 78g / 탄수화물 190g / 지방 40g" },
-                    { title: "💬 감정 일기", color: "text-purple-400", content: `"오늘은 기분이 안정적이고 활기찼어요!"` },
-                ].map((card, i) => (
-                    <div
-                        key={i}
-                        className="p-6 bg-gray-100/70 dark:bg-gray-800/70 rounded-xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300"
-                    >
-                        <h3 className={`text-xl font-semibold mb-2 ${card.color}`}>{card.title}</h3>
-                        <p className="text-gray-700 dark:text-gray-300">{card.content}</p>
-                    </div>
-                ))}
-            </div>
 
+                {/* 🏃 운동 기록 (더미 유지) */}
+                <div className="p-6 bg-gray-100/70 dark:bg-gray-800/70 rounded-xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                    <h3 className="text-xl font-semibold mb-2 text-blue-400">🏃 운동 기록</h3>
+                    <p className="text-gray-700 dark:text-gray-300">오늘 총 7,824보 걸음 / 45분 운동</p>
+                </div>
+
+                {/* 🥗 식단 요약 — 실데이터 연동 */}
+                <DashboardMealCard />
+
+                {/* 💬 감정 일기 (더미 유지) */}
+                <div className="p-6 bg-gray-100/70 dark:bg-gray-800/70 rounded-xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
+                    <h3 className="text-xl font-semibold mb-2 text-purple-400">💬 감정 일기</h3>
+                    <p className="text-gray-700 dark:text-gray-300">"오늘은 기분이 안정적이고 활기찼어요!"</p>
+                </div>
+
+            </div>
             {/* ✅ AI 피드백 섹션 */}
             <section className="mt-10 bg-gray-100/70 dark:bg-gray-800/70 rounded-2xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg p-8 transition-all duration-300">
                 <h3 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
@@ -281,7 +284,6 @@ export default function Dashboard() {
                     <ChatContainer />
                 </div>
             </motion.section>
-
         </motion.div>
     );
 }

@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface DailyMealRepository extends JpaRepository<DailyMeal, Long> {
     Optional<DailyMeal> findByUserIdAndDate(Long userId, LocalDate date);
+
 }

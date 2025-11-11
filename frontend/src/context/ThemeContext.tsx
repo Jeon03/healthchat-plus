@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import type { ReactNode } from "react"; // ✅ 타입 전용 import
+import type {ReactNode} from "react"; // ✅ 타입 전용 import
+import {createContext, useContext, useEffect, useState} from "react";
 
 interface ThemeContextType {
     theme: "light" | "dark";

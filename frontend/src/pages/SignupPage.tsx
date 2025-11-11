@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import type { Id as ToastId } from "react-toastify";
+import {useEffect, useMemo, useRef, useState} from "react";
+import type {Id as ToastId} from "react-toastify";
+import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 function formatMMSS(total: number) {
     const m = Math.floor(total / 60)

@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
+import {useEffect, useMemo, useState} from "react";
 import api from "../api/axios";
-import { toast } from "react-toastify";
-import { useNavigate } from "react-router-dom";
+import {toast} from "react-toastify";
+import {useNavigate} from "react-router-dom";
 import GoalModal from "../components/GoalModal";
 
 export default function ProfilePage() {

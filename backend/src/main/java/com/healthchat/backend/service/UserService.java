@@ -5,7 +5,6 @@ import com.healthchat.backend.dto.ProfileRequest;
 import com.healthchat.backend.dto.ProfileResponse;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;

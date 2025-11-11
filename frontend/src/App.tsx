@@ -1,11 +1,11 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import {Navigate, Route, Routes, useLocation} from "react-router-dom";
 import Layout from "./components/common/Layout";
 import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard";
 import SignupPage from "./pages/SignupPage";
-import { useAuth } from "./context/AuthContext";
+import {useAuth} from "./context/AuthContext";
 import {useEffect, useRef} from "react";
-import { toast, ToastContainer } from "react-toastify";
+import {toast, ToastContainer} from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "./api/axios";
 import ProfilePage from "./pages/ProfilePage.tsx";
