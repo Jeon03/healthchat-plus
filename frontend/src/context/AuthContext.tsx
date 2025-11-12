@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <AuthContext.Provider value={{ user, loading, refreshUser, logout }}>
             {loading ? (
                 <div className="flex justify-center items-center h-screen text-gray-500">
-                    🔄 사용자 정보를 확인 중입니다...
+                    사용자 정보를 확인 중입니다...
                 </div>
             ) : (
                 children

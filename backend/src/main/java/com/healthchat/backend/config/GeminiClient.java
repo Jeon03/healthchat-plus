@@ -60,7 +60,7 @@ public class GeminiClient {
 
         } catch (Exception e) {
             System.err.println("⚠️ Gemini API 호출 실패 (" + model + "): " + e.getMessage());
-            return fallbackJson(); // ✅ fallback 최소화 (테스트용)
+            return null;
         }
     }
 
@@ -89,21 +89,4 @@ public class GeminiClient {
         return text;
     }
 
-    /**
-     * 임시 fallback JSON (테스트용)
-     */
-    private String fallbackJson() {
-        return """
-        {
-          "meals": [
-            {
-              "time": "breakfast",
-              "foods": [
-                {"name": "rice", "quantity": 210, "unit": "g"}
-              ]
-            }
-          ]
-        }
-        """;
-    }
 }

@@ -38,6 +38,16 @@ export default function DashboardMealCard() {
         fetchMeal();
     }, []);
 
+    useEffect(() => {
+        if (open) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "auto";
+        }
+        return () => {
+            document.body.style.overflow = "auto";
+        };
+    }, [open]);
     const handleOpen = () => {
         if (!loading && meal) setOpen(true);
     };
@@ -103,7 +113,6 @@ export default function DashboardMealCard() {
                 </div>
             </motion.div>
 
-            {/* ✅ 상세 모달 */}
             <AnimatePresence>
                 {open && meal && (
                     <motion.div
@@ -111,15 +120,16 @@ export default function DashboardMealCard() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ duration: 0.25 }}
-                            className="w-full max-w-3xl"
+                            initial={{ y: 40, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 40, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                            className="w-full max-w-4xl mx-auto my-10 px-4"
                         >
+                            {/* ✅ 여기서는 '순수 내용'만 */}
                             <MealDetailModal
                                 meal={meal}
                                 onClose={() => setOpen(false)}

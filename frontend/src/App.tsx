@@ -78,7 +78,7 @@ export default function App() {
     if (loading) {
         return (
             <div className="flex justify-center items-center h-screen text-gray-500">
-                🔄 사용자 정보를 확인 중입니다...
+                사용자 정보를 확인 중입니다...
             </div>
         );
     }

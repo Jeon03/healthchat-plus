@@ -65,21 +65,21 @@ public class DailyMealService {
         String target = analysis.getTargetMeal();
 
         switch (action) {
+            case "replace" -> {
+                System.out.println("전체 식단 교체 감지 (replace)");
+                meals.clear();
+                meals.addAll(analysis.getMeals());
+            }
             case "update" -> {
                 System.out.println("✏️ 식단 수정 감지 → " + target);
-                if (target != null) {
-                    // 같은 끼니 제거 후 새 식단 추가
-                    meals.removeIf(m -> m.getTime().equals(target));
-                }
+                if (target != null) meals.removeIf(m -> m.getTime().equals(target));
                 meals.addAll(analysis.getMeals());
             }
             case "delete" -> {
                 System.out.println("🗑️ 식단 삭제 감지 → " + target);
-                if (target != null) {
-                    meals.removeIf(m -> m.getTime().equals(target));
-                }
+                if (target != null) meals.removeIf(m -> m.getTime().equals(target));
             }
-            default -> { // add
+            default -> {
                 System.out.println("➕ 식단 추가 감지");
                 meals.addAll(analysis.getMeals());
             }

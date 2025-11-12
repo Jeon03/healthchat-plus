@@ -1,13 +1,12 @@
 package com.healthchat.backend.controller;
 
 import com.healthchat.backend.dto.DailyAnalysis;
+import com.healthchat.backend.dto.UnifiedAnalysisResult;
 import com.healthchat.backend.entity.DailyMeal;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
 import com.healthchat.backend.security.CustomUserDetails;
-import com.healthchat.backend.service.DailyLogService;
-import com.healthchat.backend.service.DailyMealService;
-import com.healthchat.backend.service.GeminiAnalysisService;
+import com.healthchat.backend.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,10 +20,11 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 public class AiAnalysisController {
 
-    private final GeminiAnalysisService geminiAnalysisService;
+    private final GeminiMealAnalysisService geminiAnalysisService;
     private final DailyMealService dailyMealService;
     private final UserRepository userRepository;
     private final DailyLogService dailyLogService;
+    private final GeminiUnifiedAnalysisService geminiUnifiedAnalysisService;
 
 
     @PostMapping("/meals/save")
@@ -80,32 +80,48 @@ public class AiAnalysisController {
 
 
 
-    @PostMapping("/meals")
-    public ResponseEntity<DailyAnalysis> analyzeAndSave(
+//    @PostMapping("/meals")
+//    public ResponseEntity<DailyAnalysis> analyzeAndSave(
+//            @AuthenticationPrincipal CustomUserDetails user,
+//            @RequestBody Map<String, String> req
+//    ) {
+//        if (user == null) {
+//            throw new RuntimeException("로그인 필요");
+//        }
+//
+//        String text = req.getOrDefault("text", "");
+//        System.out.println("📥 입력 텍스트: " + text);
+//
+//        // 1️⃣ Gemini 분석 (식단 + 영양 포함)
+//        DailyAnalysis analysis = geminiAnalysisService.analyzeDailyLog(text);
+//
+//        // 2️⃣ DB 저장
+//        User foundUser = userRepository.findById(user.getId())
+//                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+//
+//        // ✅ 식단 저장
+//        var meal = dailyMealService.saveDailyMeal(foundUser, analysis);
+//
+//        // ✅ 하루 통합 로그에도 반영
+//        dailyLogService.updateDailyLog(foundUser, meal);
+//
+//        // 3️⃣ 결과 반환
+//        return ResponseEntity.ok(analysis);
+//    }
+
+    @PostMapping("/analyze")
+    public ResponseEntity<UnifiedAnalysisResult> analyzeAll(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody Map<String, String> req
     ) {
         if (user == null) {
-            throw new RuntimeException("로그인 필요");
+            return ResponseEntity.status(401).build();
         }
 
         String text = req.getOrDefault("text", "");
-        System.out.println("📥 입력 텍스트: " + text);
+        System.out.println("📥 통합 입력 텍스트: " + text);
 
-        // 1️⃣ Gemini 분석 (식단 + 영양 포함)
-        DailyAnalysis analysis = geminiAnalysisService.analyzeDailyLog(text);
-
-        // 2️⃣ DB 저장
-        User foundUser = userRepository.findById(user.getId())
-                .orElseThrow(() -> new RuntimeException("사용자 없음"));
-
-        // ✅ 식단 저장
-        var meal = dailyMealService.saveDailyMeal(foundUser, analysis);
-
-        // ✅ 하루 통합 로그에도 반영
-        dailyLogService.updateDailyLog(foundUser, meal);
-
-        // 3️⃣ 결과 반환
-        return ResponseEntity.ok(analysis);
+        UnifiedAnalysisResult result = geminiUnifiedAnalysisService.analyzeAll(user.getId(), text);
+        return ResponseEntity.ok(result);
     }
 }

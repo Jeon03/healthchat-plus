@@ -88,3 +88,11 @@ input[type="number"] {
         -moz-appearance: textfield;
     }
 }
+
+/* 모든 스크롤바 숨기기 (스크롤은 가능) */
+::-webkit-scrollbar {
+    display: none;
+}
+html {
+    scrollbar-width: none; /* Firefox */
+}
