@@ -52,11 +52,6 @@ Thumbs.db
 # =========================
 # 🔐 Environment & Secrets
 # =========================
-application.yml
-application-local.yml
-application-dev.yml
-application-prod.yml
-application.properties
 .env
 .env.local
 .env.production
