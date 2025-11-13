@@ -1,7 +1,9 @@
 package com.healthchat.backend.controller;
 
+import com.healthchat.backend.dto.DailyActivityResponseDto;
 import com.healthchat.backend.dto.DailyAnalysis;
 import com.healthchat.backend.dto.UnifiedAnalysisResult;
+import com.healthchat.backend.entity.DailyActivity;
 import com.healthchat.backend.entity.DailyMeal;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
@@ -20,12 +22,11 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 public class AiAnalysisController {
 
-    private final GeminiMealAnalysisService geminiAnalysisService;
     private final DailyMealService dailyMealService;
     private final UserRepository userRepository;
-    private final DailyLogService dailyLogService;
     private final GeminiUnifiedAnalysisService geminiUnifiedAnalysisService;
-
+    private final DailyExerciseService dailyExerciseService;
+    private final RecommendedActivityService recommendedActivityService;
 
     @PostMapping("/meals/save")
     public ResponseEntity<DailyMeal> saveManual(
@@ -80,34 +81,74 @@ public class AiAnalysisController {
 
 
 
-//    @PostMapping("/meals")
-//    public ResponseEntity<DailyAnalysis> analyzeAndSave(
-//            @AuthenticationPrincipal CustomUserDetails user,
-//            @RequestBody Map<String, String> req
-//    ) {
-//        if (user == null) {
-//            throw new RuntimeException("로그인 필요");
-//        }
-//
-//        String text = req.getOrDefault("text", "");
-//        System.out.println("📥 입력 텍스트: " + text);
-//
-//        // 1️⃣ Gemini 분석 (식단 + 영양 포함)
-//        DailyAnalysis analysis = geminiAnalysisService.analyzeDailyLog(text);
-//
-//        // 2️⃣ DB 저장
-//        User foundUser = userRepository.findById(user.getId())
-//                .orElseThrow(() -> new RuntimeException("사용자 없음"));
-//
-//        // ✅ 식단 저장
-//        var meal = dailyMealService.saveDailyMeal(foundUser, analysis);
-//
-//        // ✅ 하루 통합 로그에도 반영
-//        dailyLogService.updateDailyLog(foundUser, meal);
-//
-//        // 3️⃣ 결과 반환
-//        return ResponseEntity.ok(analysis);
-//    }
+    @PostMapping("/activity/save")
+    public ResponseEntity<DailyActivity> saveActivity(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @RequestBody DailyActivity updated
+    ) {
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        DailyActivity saved = dailyExerciseService.saveOrUpdateManual(foundUser, updated);
+        return ResponseEntity.ok(saved);
+    }
+
+    /** ✅ 오늘의 운동 조회 */
+    @GetMapping("/activity/today")
+    public ResponseEntity<?> getTodayActivity(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        if (user == null) return ResponseEntity.status(401).body("로그인 필요");
+
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        DailyActivity today = dailyExerciseService.getTodayActivity(foundUser);
+
+        double recommended = recommendedActivityService.calculateRecommendedBurn(foundUser);
+
+        if (today == null) {
+            return ResponseEntity.ok(
+                    DailyActivityResponseDto.builder()
+                            .activity(null)
+                            .recommendedBurn(recommended)
+                            .build()
+            );
+        }
+
+        return ResponseEntity.ok(
+                DailyActivityResponseDto.builder()
+                        .activity(today)
+                        .recommendedBurn(recommended)
+                        .build()
+        );
+    }
+
+    /** ✅ 특정 날짜 운동 조회 */
+    @GetMapping("/activity/{date}")
+    public ResponseEntity<?> getActivityByDate(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable String date
+    ) {
+        if (user == null) return ResponseEntity.status(401).body("로그인 필요");
+
+        LocalDate target = LocalDate.parse(date);
+
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        DailyActivity activity = dailyExerciseService.getActivityByDate(foundUser, target);
+
+        if (activity == null) {
+            return ResponseEntity.ok("해당 날짜의 운동 데이터가 없습니다.");
+        }
+
+        return ResponseEntity.ok(activity);
+    }
 
     @PostMapping("/analyze")
     public ResponseEntity<UnifiedAnalysisResult> analyzeAll(

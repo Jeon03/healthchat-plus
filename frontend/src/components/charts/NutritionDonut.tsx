@@ -1,13 +1,19 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 
 type Props = {
-    protein: number; // g
-    fat: number;     // g
-    carbs: number;   // g
-    size?: number;   // optional
+    protein: number;
+    fat: number;
+    carbs: number;
+    size?: number;
 };
 
-export default function NutritionDonut({ protein, fat, carbs, size = 240 }: Props) {
+export default function NutritionDonut({
+                                           protein,
+                                           fat,
+                                           carbs,
+                                           size = 340,   // ⬅ 기본값을 더 크게 변경
+                                       }: Props) {
+
     const total = (protein + fat + carbs) || 1;
 
     const data = [
@@ -16,7 +22,7 @@ export default function NutritionDonut({ protein, fat, carbs, size = 240 }: Prop
         { name: "탄수화물", value: carbs },
     ];
 
-    const COLORS = ["#60a5fa", "#f59e0b", "#10b981"]; // 파랑 / 노랑 / 초록
+    const COLORS = ["#60a5fa", "#f59e0b", "#10b981"];
 
     return (
         <div className="relative w-full" style={{ height: size }}>
@@ -26,8 +32,8 @@ export default function NutritionDonut({ protein, fat, carbs, size = 240 }: Prop
                         data={data}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius="60%"
-                        outerRadius="85%"
+                        innerRadius="70%"   // ⬅ 기존 60 → 62
+                        outerRadius="100%"   // ⬅ 기존 85 → 88
                         strokeWidth={2}
                         isAnimationActive
                     >
@@ -35,6 +41,7 @@ export default function NutritionDonut({ protein, fat, carbs, size = 240 }: Prop
                             <Cell key={i} fill={COLORS[i % COLORS.length]} />
                         ))}
                     </Pie>
+
                     <Tooltip
                         formatter={(value: any, _name: string, item: any) => {
                             const pct = ((value / total) * 100).toFixed(0);
@@ -47,25 +54,25 @@ export default function NutritionDonut({ protein, fat, carbs, size = 240 }: Prop
             {/* 중앙 요약 */}
             <div className="absolute inset-0 flex flex-col items-center justify-center select-none pointer-events-none">
                 <div className="text-sm text-gray-500 dark:text-gray-400">총 영양소</div>
-                <div className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                <div className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                     {(protein + fat + carbs).toFixed(1)} g
                 </div>
             </div>
 
             {/* 범례 */}
-            <div className="mt-3 flex justify-center gap-4 text-xs text-gray-600 dark:text-gray-300">
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ background: COLORS[0] }} />
-          단백질
-        </span>
+            <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600 dark:text-gray-300">
                 <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ background: COLORS[1] }} />
-          지방
-        </span>
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ background: COLORS[0] }} />
+                    단백질
+                </span>
                 <span className="flex items-center gap-1">
-          <span className="inline-block w-2 h-2 rounded-full" style={{ background: COLORS[2] }} />
-          탄수화물
-        </span>
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ background: COLORS[1] }} />
+                    지방
+                </span>
+                <span className="flex items-center gap-1">
+                    <span className="inline-block w-3 h-3 rounded-full" style={{ background: COLORS[2] }} />
+                    탄수화물
+                </span>
             </div>
         </div>
     );

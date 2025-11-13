@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import api from "../../api/axios";
 import MealDetailModal from "./MealDetailModal";
+import {useDashboard} from "../../context/DashboardContext.tsx";
 
 export interface DailyMeal {
     date: string;
@@ -17,10 +18,14 @@ export default function DashboardMealCard() {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
+    // ⭐ 전역 상태로부터 자동갱신 플래그 가져오기
+    const { shouldRefresh, setShouldRefresh } = useDashboard();
+
     /** ✅ 오늘 식단 데이터 로드 */
     const fetchMeal = async () => {
         try {
             const res = await api.get<DailyMeal>("/ai/meals/today");
+
             if (res.data && typeof res.data === "object" && Object.keys(res.data).length > 0) {
                 setMeal(res.data);
             } else {
@@ -34,10 +39,21 @@ export default function DashboardMealCard() {
         }
     };
 
+    // ✅ 첫 렌더링 시 오늘 식단 불러오기
     useEffect(() => {
         fetchMeal();
     }, []);
 
+    // ⭐⭐ AI 입력 → setShouldRefresh(true) → 이 부분이 자동 실행됨
+    useEffect(() => {
+        if (shouldRefresh) {
+            console.log("🔥 DashboardMealCard 갱신 감지 → 식단 다시 불러오기");
+            fetchMeal();
+            setShouldRefresh(false); // 플래그 리셋
+        }
+    }, [shouldRefresh]);
+
+    // 모달 열기/닫기 제어
     useEffect(() => {
         if (open) {
             document.body.style.overflow = "hidden";
@@ -48,6 +64,7 @@ export default function DashboardMealCard() {
             document.body.style.overflow = "auto";
         };
     }, [open]);
+
     const handleOpen = () => {
         if (!loading && meal) setOpen(true);
     };
@@ -120,16 +137,21 @@ export default function DashboardMealCard() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm overflow-y-auto"
+                        className="
+                fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
+                flex justify-center items-center
+            "
                     >
                         <motion.div
                             initial={{ y: 40, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 40, opacity: 0 }}
                             transition={{ duration: 0.3, ease: 'easeOut' }}
-                            className="w-full max-w-4xl mx-auto my-10 px-4"
+                            className="
+                    w-full max-w-4xl mx-auto px-4
+                    max-h-[90vh] overflow-y-auto
+                "
                         >
-                            {/* ✅ 여기서는 '순수 내용'만 */}
                             <MealDetailModal
                                 meal={meal}
                                 onClose={() => setOpen(false)}

@@ -6,13 +6,16 @@ import "./index.css";
 
 import {AuthProvider} from "./context/AuthContext";
 import {ThemeProvider} from "./context/ThemeContext";
+import {DashboardProvider} from "./context/DashboardContext.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <BrowserRouter>
             <ThemeProvider>
                 <AuthProvider>
-                    <App />
+                    <DashboardProvider>
+                        <App />
+                    </DashboardProvider>
                 </AuthProvider>
             </ThemeProvider>
         </BrowserRouter>

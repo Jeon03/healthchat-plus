@@ -23,23 +23,22 @@ public class DailyMealService {
     private final DailyMealRepository dailyMealRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-
     /** ✅ 오늘 식단 조회 */
     public DailyMeal getTodayMeal(User user) {
         LocalDate today = LocalDate.now();
         return dailyMealRepository.findByUserIdAndDate(user.getId(), today).orElse(null);
     }
 
-    /** ✅ 특정 날짜 식단 조회 (옵션) */
+    /** ✅ 특정 날짜 식단 조회 */
     public DailyMeal getMealByDate(User user, LocalDate date) {
         return dailyMealRepository.findByUserIdAndDate(user.getId(), date).orElse(null);
     }
 
-
+    @Transactional
     public DailyMeal saveDailyMeal(User user, DailyAnalysis analysis) {
         LocalDate today = LocalDate.now();
 
-        // ✅ 오늘 날짜의 기존 식단 기록 조회 (없으면 새로 생성)
+        // ✅ 오늘 기록 조회 (없으면 새로 생성)
         DailyMeal meal = dailyMealRepository.findByUserIdAndDate(user.getId(), today)
                 .orElse(DailyMeal.builder()
                         .user(user)
@@ -60,35 +59,79 @@ public class DailyMealService {
             }
         }
 
-        // ✅ action에 따라 분기
+        // ✅ action / target 정리
         String action = analysis.getAction() == null ? "add" : analysis.getAction();
         String target = analysis.getTargetMeal();
+        List<MealEntry> newMeals = analysis.getMeals() != null ? analysis.getMeals() : List.of();
+
+        System.out.printf("📌 DailyMealService - action=%s, target=%s, newMeals=%d개%n",
+                action, target, newMeals.size());
+
+        // ✅ [보정] update인데 targetMeal이 없고, 끼니가 1개만 있으면 → 그 끼니를 target으로 사용
+        if ("update".equals(action) && target == null && newMeals.size() == 1) {
+            target = newMeals.get(0).getTime();
+            System.out.println("🔧 targetMeal 자동 보정 → " + target);
+        }
 
         switch (action) {
             case "replace" -> {
-                System.out.println("전체 식단 교체 감지 (replace)");
+                // 🔄 전체 초기화 후 새 식단으로 교체
+                System.out.println("🔁 전체 식단 교체 (replace)");
                 meals.clear();
-                meals.addAll(analysis.getMeals());
+                meals.addAll(newMeals);
             }
             case "update" -> {
                 System.out.println("✏️ 식단 수정 감지 → " + target);
-                if (target != null) meals.removeIf(m -> m.getTime().equals(target));
-                meals.addAll(analysis.getMeals());
+
+                if (!newMeals.isEmpty()) {
+                    if (target != null) {
+                        // 🎯 "아침만 바꿔줘" 같은 경우 → 해당 끼니만 삭제 후 새로 추가
+                        String finalTarget = target;
+                        meals.removeIf(m -> finalTarget.equals(m.getTime()));
+                    } else {
+                        // 🧠 "아침은 ~~ 점심은 ~~ 저녁은 ~~" 같이 여러 끼니 한 번에 수정
+                        //    → 새로 들어온 끼니들의 time 들을 기준으로 기존 것들 제거
+                        var timesToReplace = newMeals.stream()
+                                .map(MealEntry::getTime)
+                                .filter(t -> t != null)
+                                .collect(java.util.stream.Collectors.toSet());
+
+                        meals.removeIf(m -> timesToReplace.contains(m.getTime()));
+                        System.out.println("🔄 멀티 끼니 수정 → " + timesToReplace + " 교체");
+                    }
+
+                    // ✅ 새 분석 결과 추가
+                    meals.addAll(newMeals);
+                }
             }
             case "delete" -> {
                 System.out.println("🗑️ 식단 삭제 감지 → " + target);
-                if (target != null) meals.removeIf(m -> m.getTime().equals(target));
+                if (target != null) {
+                    String finalTarget = target;
+                    meals.removeIf(m -> finalTarget.equals(m.getTime()));
+                } else if (!newMeals.isEmpty()) {
+                    // 예: "아침이랑 점심 빼줘" 같이 올 수도 있어서, newMeals 기준 제거
+                    var timesToDelete = newMeals.stream()
+                            .map(MealEntry::getTime)
+                            .filter(t -> t != null)
+                            .collect(java.util.stream.Collectors.toSet());
+                    meals.removeIf(m -> timesToDelete.contains(m.getTime()));
+                }
             }
             default -> {
-                System.out.println("➕ 식단 추가 감지");
-                meals.addAll(analysis.getMeals());
+                // ➕ 기본은 "추가" — 다만 여기선 그대로 addAll 유지
+                //    (사용자가 "그리고 콜라 한 캔 더" 같은 걸 의도할 수 있어서)
+                System.out.println("➕ 식단 추가 감지 (add)");
+                meals.addAll(newMeals);
             }
         }
 
-// ✅ 안전한 합계 계산
+        // ✅ 총합 재계산
         double totalKcal = 0, totalProtein = 0, totalFat = 0, totalCarbs = 0;
         for (MealEntry m : meals) {
+            if (m.getFoods() == null) continue;
             for (FoodItem f : m.getFoods()) {
+                if (f == null) continue;
                 totalKcal += f.getCalories() != null ? f.getCalories() : 0;
                 totalProtein += f.getProtein() != null ? f.getProtein() : 0;
                 totalFat += f.getFat() != null ? f.getFat() : 0;
@@ -112,24 +155,22 @@ public class DailyMealService {
 
         System.out.printf("✅ [%s] 처리 완료 (user:%d / %s)%n", action, user.getId(), today);
         System.out.printf("총합 → %.1f kcal | P: %.1f | F: %.1f | C: %.1f%n",
-                totalKcal, totalProtein, totalFat, totalCarbs);
+                totalKcal, totalProtein, totalCarbs, totalCarbs);
 
-        return saved;
+        return dailyMealRepository.findByUserIdAndDate(user.getId(), today)
+                .orElse(saved);
     }
 
     @Transactional
     public DailyMeal saveOrUpdateManual(User user, DailyMeal updated) {
-        // ✅ date 필드가 LocalDate라면 parse() 불필요
         LocalDate date = updated.getDate() != null ? updated.getDate() : LocalDate.now();
 
-        // ✅ 기존 데이터 조회 (있으면 수정, 없으면 새로 생성)
         DailyMeal meal = dailyMealRepository.findByUserIdAndDate(user.getId(), date)
                 .orElse(DailyMeal.builder()
                         .user(user)
                         .date(date)
                         .build());
 
-        // ✅ 필드 교체
         meal.setMealsJson(updated.getMealsJson());
         meal.setTotalCalories(updated.getTotalCalories());
         meal.setTotalProtein(updated.getTotalProtein());
@@ -138,5 +179,5 @@ public class DailyMealService {
 
         return dailyMealRepository.save(meal);
     }
-
 }
+

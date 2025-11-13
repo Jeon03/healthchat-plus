@@ -8,18 +8,14 @@ import com.healthchat.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * 🧠 GeminiUnifiedAnalysisService
- * - 식단 + 운동 (추후 감정 포함 예정)
- * - Gemini 분석 결과를 통합 처리 및 DB 반영
- */
 @Service
 @RequiredArgsConstructor
 public class GeminiUnifiedAnalysisService {
 
+    private final GeminiRoutingService routingService; // ⭐ NEW!
     private final GeminiMealAnalysisService mealService;
     private final GeminiExerciseAnalysisService exerciseService;
-//    private final GeminiEmotionAnalysisService emotionService;
+    // private final GeminiEmotionAnalysisService emotionService;
 
     private final UserRepository userRepository;
     private final DailyMealService dailyMealService;
@@ -27,28 +23,50 @@ public class GeminiUnifiedAnalysisService {
     private final DailyLogService dailyLogService;
 
     public UnifiedAnalysisResult analyzeAll(Long userId, String userText) {
-        // ✅ 1. 사용자 정보 조회
+
+        // 1️⃣ 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자 없음"));
 
-        // ✅ 2. 식단 분석
-        DailyAnalysis mealAnalysis = mealService.analyzeDailyLog(userText);
+        // 2️⃣ 문장 라우팅 (식단/운동/감정 분리)
+        var routed = routingService.route(userText);
 
-        // ✅ 3. 운동 분석
-        ExerciseAnalysisResult exerciseAnalysis = exerciseService.analyzeExercise(userId, userText);
+        // 3️⃣ 각각 분석 실행
+        DailyAnalysis mealAnalysis = null;
+        if (!routed.mealText().isBlank()) {
+            mealAnalysis = mealService.analyzeDailyLog(routed.mealText());
+        }
 
-        // ✅ 4. DB 저장
-        DailyMeal meal = dailyMealService.saveDailyMeal(user, mealAnalysis);
-        DailyActivity activity = dailyExerciseService.saveOrUpdateDailyActivity(user, exerciseAnalysis);
+        ExerciseAnalysisResult exerciseAnalysis = null;
+        if (!routed.exerciseText().isBlank()) {
+            exerciseAnalysis = exerciseService.analyzeExercise(userId, routed.exerciseText());
+        }
 
-        // ✅ 5. 하루 통합 로그 업데이트 (식단 + 운동)
+        // Emotion 분석기는 나중에 붙일 수 있음
+        // EmotionResult emotionAnalysis = null;
+        // if (!routed.emotionText().isBlank()) {
+        //     emotionAnalysis = emotionService.analyzeEmotion(userId, routed.emotionText());
+        // }
+
+        // 4️⃣ DB 업데이트 (null이면 업데이트 안함)
+        DailyMeal meal = null;
+        if (mealAnalysis != null) {
+            meal = dailyMealService.saveDailyMeal(user, mealAnalysis);
+        }
+
+        DailyActivity activity = null;
+        if (exerciseAnalysis != null) {
+            activity = dailyExerciseService.saveOrUpdateDailyActivity(user, exerciseAnalysis);
+        }
+
+        // 5️⃣ 하루 종합 로그 업데이트
         dailyLogService.updateDailyLog(user, meal, activity);
 
-        // ✅ 6. 통합 결과 반환
+        // 6️⃣ 통합 결과 반환
         return UnifiedAnalysisResult.builder()
                 .mealAnalysis(mealAnalysis)
                 .exerciseAnalysis(exerciseAnalysis)
-//                .emotionAnalysis(emotionAnalysis)
+                // .emotionAnalysis(emotionAnalysis)
                 .build();
     }
 }

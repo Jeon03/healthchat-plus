@@ -1,5 +1,6 @@
 package com.healthchat.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,8 +33,8 @@ public class DailyActivity {
     private double totalCalories;
     private double totalDuration; // 분 단위
 
-    // ✅ 하위 운동 목록
     @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     @Builder.Default
     private List<ExerciseItem> exercises = new ArrayList<>();
 
