@@ -6,7 +6,9 @@ spring:
     url: jdbc:mysql://localhost:3306/healthchat?serverTimezone=Asia/Seoul
     username: root
     password: 1234
-
+  devtools:
+    restart:
+      enabled: false
   jpa:
     hibernate:
       ddl-auto: update

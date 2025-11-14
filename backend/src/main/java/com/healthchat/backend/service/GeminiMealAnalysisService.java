@@ -4,9 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthchat.backend.config.GeminiClient;
 import com.healthchat.backend.dto.DailyAnalysis;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 🧠 GeminiMealAnalysisService (v5)
@@ -19,13 +21,16 @@ public class GeminiMealAnalysisService {
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public DailyAnalysis analyzeDailyLog(String userText) {
+    @Async
+    public CompletableFuture<DailyAnalysis> analyzeDailyLog(String userText) {
+
         String prompt = buildPrompt(userText);
         String geminiResponse = geminiClient.generateJson("gemini-2.5-pro", prompt);
+        long start = System.currentTimeMillis();
 
         if (geminiResponse == null) {
             System.out.println("⚠️ Gemini 응답 없음 — fallback 사용");
-            return buildFallbackAnalysis(userText);
+            return CompletableFuture.completedFuture(buildFallbackAnalysis(userText));
         }
 
         String json = extractJson(geminiResponse);
@@ -55,18 +60,23 @@ public class GeminiMealAnalysisService {
                 System.out.println("🔧 update targetMeal 자동 설정 → " + time);
             }
 
-            System.out.printf("✅ Gemini 분석 완료 → %s (%.0f kcal)%n",
+            /* 7) 완료 로그 */
+            long took = System.currentTimeMillis() - start;
+            System.out.printf("✔ [Meal] 식단 분석 완료 (%dms) → %s (%.0f kcal)%n",
+                    took,
                     result.getAction() == null ? "add" : result.getAction(),
-                    result.getTotalCalories());
-            return result;
+                    result.getTotalCalories()
+            );
+
+            return CompletableFuture.completedFuture(result);
 
         } catch (Exception e) {
             System.err.println("❌ Gemini JSON 파싱 실패: " + e.getMessage());
             System.err.println("⚠️ 응답 내용: " + geminiResponse);
-            return buildFallbackAnalysis(userText);
+
+            return CompletableFuture.completedFuture(buildFallbackAnalysis(userText));
         }
     }
-
     private String buildPrompt(String userText) {
         return """
 너는 사용자의 식단 기록을 관리하는 전문 AI 어시스턴트야.

@@ -11,6 +11,7 @@ import maleIcon from "../assets/icons/male.svg";
 import femaleIcon from "../assets/icons/female.svg";
 import otherIcon from "../assets/icons/other.svg";
 import {useDashboard} from "../context/DashboardContext.tsx";
+import DashboardEmotionCard from "../components/emotion/DashboardEmotionCard.tsx";
 
 interface Profile {
     nickname: string;
@@ -261,11 +262,8 @@ export default function Dashboard() {
                 {/* 🥗 식단 요약 — 실데이터 연동 */}
                 <DashboardMealCard />
 
-                {/* 💬 감정 일기 (더미 유지) */}
-                <div className="p-6 bg-gray-100/70 dark:bg-gray-800/70 rounded-xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-300">
-                    <h3 className="text-xl font-semibold mb-2 text-purple-400">💬 감정 일기</h3>
-                    <p className="text-gray-700 dark:text-gray-300">"오늘은 기분이 안정적이고 활기찼어요!"</p>
-                </div>
+                {/* 😊 감정 요약 카드 */}
+                <DashboardEmotionCard />
 
             </div>
             {/* ✅ AI 피드백 섹션 */}

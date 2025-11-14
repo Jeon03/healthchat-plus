@@ -74,11 +74,8 @@ export default function CategoryDonutWithPartChart({ data }: Props) {
     return (
         <div className="w-full flex flex-col lg:flex-row gap-10 justify-center items-start">
 
-            {/* =======================
-                1) 운동 카테고리 도넛 차트
-            ======================= */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg
-                            border border-gray-200 dark:border-gray-700 w-full max-w-[360px] mx-auto">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl
+                w-full max-w-[360px] mx-auto">
 
                 <h3 className="text-center mb-4 font-bold text-gray-700 dark:text-gray-200">
                     🏷 운동 카테고리 비율
@@ -127,8 +124,8 @@ export default function CategoryDonutWithPartChart({ data }: Props) {
             {/* =======================
                 2) 운동 부위 도넛 차트
             ======================= */}
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-lg
-                            border border-gray-200 dark:border-gray-700 w-full max-w-[360px] mx-auto">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl
+                w-full max-w-[360px] mx-auto">
 
                 <h3 className="text-center mb-4 font-bold text-gray-700 dark:text-gray-200">
                     💪 운동 부위 비율

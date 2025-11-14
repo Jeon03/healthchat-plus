@@ -1,9 +1,11 @@
 package com.healthchat.backend.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.healthchat.backend.dto.DailyActivityResponseDto;
 import com.healthchat.backend.dto.DailyAnalysis;
 import com.healthchat.backend.dto.UnifiedAnalysisResult;
 import com.healthchat.backend.entity.DailyActivity;
+import com.healthchat.backend.entity.DailyEmotion;
 import com.healthchat.backend.entity.DailyMeal;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
@@ -25,9 +27,19 @@ public class AiAnalysisController {
     private final DailyMealService dailyMealService;
     private final UserRepository userRepository;
     private final GeminiUnifiedAnalysisService geminiUnifiedAnalysisService;
+    private final DailyEmotionService dailyEmotionService;
     private final DailyExerciseService dailyExerciseService;
     private final RecommendedActivityService recommendedActivityService;
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
+    private <T> T fromJson(String json, Class<T> type) {
+        try {
+            return mapper.readValue(json, type);
+        } catch (Exception e) {
+            return null;
+        }
+    }
     @PostMapping("/meals/save")
     public ResponseEntity<DailyMeal> saveManual(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -149,6 +161,49 @@ public class AiAnalysisController {
 
         return ResponseEntity.ok(activity);
     }
+
+    /** 오늘의 감정 조회 */
+    @GetMapping("/emotion/today")
+    public ResponseEntity<?> getTodayEmotion(@AuthenticationPrincipal CustomUserDetails user) {
+        if (user == null) return ResponseEntity.status(401).body("로그인 필요");
+
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        DailyEmotion todayEmotion = dailyEmotionService.getTodayEmotion(foundUser);
+
+        if (todayEmotion == null) {
+            return ResponseEntity.ok("오늘 감정 기록이 없습니다.");
+        }
+
+        // ⭐ DTO 변환 후 반환
+        return ResponseEntity.ok(dailyEmotionService.toSummaryDto(todayEmotion));
+    }
+
+
+    /** 특정 날짜 감정 조회 */
+    @GetMapping("/emotion/{date}")
+    public ResponseEntity<?> getEmotionByDate(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable String date
+    ) {
+        if (user == null) return ResponseEntity.status(401).body("로그인 필요");
+
+        LocalDate target = LocalDate.parse(date);
+
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
+        DailyEmotion emotion = dailyEmotionService.getEmotionByDate(foundUser, target);
+
+        if (emotion == null) {
+            return ResponseEntity.ok("해당 날짜의 감정 데이터가 없습니다.");
+        }
+
+        // ⭐ DTO 변환 후 반환
+        return ResponseEntity.ok(dailyEmotionService.toSummaryDto(emotion));
+    }
+
 
     @PostMapping("/analyze")
     public ResponseEntity<UnifiedAnalysisResult> analyzeAll(

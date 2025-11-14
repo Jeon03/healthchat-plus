@@ -11,6 +11,6 @@ import java.util.List;
 @Builder
 public class UnifiedAnalysisResult {
     private DailyAnalysis mealAnalysis;
-    private ExerciseAnalysisResult exerciseAnalysis; // ✅ 단일 객체로 변경
-//    private EmotionAnalysisResult emotionAnalysis;   // (추후 감정 분석용)
+    private ExerciseAnalysisResult exerciseAnalysis;
+    private EmotionSummaryDto emotionAnalysis;
 }

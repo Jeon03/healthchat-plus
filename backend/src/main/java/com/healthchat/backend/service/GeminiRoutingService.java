@@ -102,11 +102,11 @@ public class GeminiRoutingService {
 """.formatted(text);
     }
 
-
     private String extractJson(String text) {
+        if (text == null) return "{}";  // ⭐ 가장 중요
         int s = text.indexOf("{");
         int e = text.lastIndexOf("}");
         if (s >= 0 && e > s) return text.substring(s, e + 1);
-        return text;
+        return "{}";
     }
 }

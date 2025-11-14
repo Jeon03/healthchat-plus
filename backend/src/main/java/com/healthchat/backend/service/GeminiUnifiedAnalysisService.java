@@ -1,25 +1,30 @@
 package com.healthchat.backend.service;
 
 import com.healthchat.backend.dto.*;
-import com.healthchat.backend.entity.User;
-import com.healthchat.backend.entity.DailyMeal;
 import com.healthchat.backend.entity.DailyActivity;
+import com.healthchat.backend.entity.DailyEmotion;
+import com.healthchat.backend.entity.DailyMeal;
+import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
 public class GeminiUnifiedAnalysisService {
 
-    private final GeminiRoutingService routingService; // ⭐ NEW!
+    private final GeminiRoutingService routingService;
+
     private final GeminiMealAnalysisService mealService;
     private final GeminiExerciseAnalysisService exerciseService;
-    // private final GeminiEmotionAnalysisService emotionService;
+    private final GeminiEmotionAnalysisService emotionService;
 
     private final UserRepository userRepository;
     private final DailyMealService dailyMealService;
     private final DailyExerciseService dailyExerciseService;
+    private final DailyEmotionService dailyEmotionService;
     private final DailyLogService dailyLogService;
 
     public UnifiedAnalysisResult analyzeAll(Long userId, String userText) {
@@ -28,45 +33,60 @@ public class GeminiUnifiedAnalysisService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자 없음"));
 
-        // 2️⃣ 문장 라우팅 (식단/운동/감정 분리)
+        // 2️⃣ 문장 라우팅
         var routed = routingService.route(userText);
 
-        // 3️⃣ 각각 분석 실행
-        DailyAnalysis mealAnalysis = null;
-        if (!routed.mealText().isBlank()) {
-            mealAnalysis = mealService.analyzeDailyLog(routed.mealText());
-        }
+        // 3️⃣ 비동기로 각각 실행 (전부 @Async 메서드)
+        CompletableFuture<DailyAnalysis> mealFuture =
+                routed.mealText().isBlank()
+                        ? CompletableFuture.completedFuture(null)
+                        : mealService.analyzeDailyLog(routed.mealText());
 
-        ExerciseAnalysisResult exerciseAnalysis = null;
-        if (!routed.exerciseText().isBlank()) {
-            exerciseAnalysis = exerciseService.analyzeExercise(userId, routed.exerciseText());
-        }
+        CompletableFuture<ExerciseAnalysisResult> exerciseFuture =
+                routed.exerciseText().isBlank()
+                        ? CompletableFuture.completedFuture(null)
+                        : exerciseService.analyzeExercise(userId, routed.exerciseText());
 
-        // Emotion 분석기는 나중에 붙일 수 있음
-        // EmotionResult emotionAnalysis = null;
-        // if (!routed.emotionText().isBlank()) {
-        //     emotionAnalysis = emotionService.analyzeEmotion(userId, routed.emotionText());
-        // }
+        CompletableFuture<EmotionAnalysisResult> emotionFuture =
+                routed.emotionText().isBlank()
+                        ? CompletableFuture.completedFuture(null)
+                        : emotionService.analyzeEmotion(routed.emotionText());
 
-        // 4️⃣ DB 업데이트 (null이면 업데이트 안함)
-        DailyMeal meal = null;
+        // 4️⃣ 모두 완료될 때까지 기다림
+        CompletableFuture.allOf(mealFuture, exerciseFuture, emotionFuture).join();
+
+        // 5️⃣ 결과 추출
+        DailyAnalysis mealAnalysis = mealFuture.join();
+        ExerciseAnalysisResult exerciseAnalysis = exerciseFuture.join();
+        EmotionAnalysisResult emotionAnalysis = emotionFuture.join();
+
+        // 6️⃣ DB 저장
+        DailyMeal savedMeal = null;
         if (mealAnalysis != null) {
-            meal = dailyMealService.saveDailyMeal(user, mealAnalysis);
+            savedMeal = dailyMealService.saveDailyMeal(user, mealAnalysis);
         }
 
-        DailyActivity activity = null;
+        DailyActivity savedActivity = null;
         if (exerciseAnalysis != null) {
-            activity = dailyExerciseService.saveOrUpdateDailyActivity(user, exerciseAnalysis);
+            savedActivity = dailyExerciseService.saveOrUpdateDailyActivity(user, exerciseAnalysis);
         }
 
-        // 5️⃣ 하루 종합 로그 업데이트
-        dailyLogService.updateDailyLog(user, meal, activity);
+        DailyEmotion savedEmotion = null;
+        EmotionSummaryDto emotionSummaryDto = null;
+        if (emotionAnalysis != null) {
+            savedEmotion = dailyEmotionService.saveDailyEmotion(user, emotionAnalysis);
+            emotionSummaryDto = dailyEmotionService.toSummaryDto(savedEmotion);
+        }
 
-        // 6️⃣ 통합 결과 반환
+        // 7️⃣ 하루 종합 로그 업데이트
+        dailyLogService.updateDailyLog(user, savedMeal, savedActivity);
+
+        // 8️⃣ 최종 통합 응답
         return UnifiedAnalysisResult.builder()
                 .mealAnalysis(mealAnalysis)
                 .exerciseAnalysis(exerciseAnalysis)
-                // .emotionAnalysis(emotionAnalysis)
+                .emotionAnalysis(emotionSummaryDto)
                 .build();
     }
 }
+

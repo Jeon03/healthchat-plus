@@ -50,9 +50,10 @@ interface ExerciseAnalysisResult {
 }
 
 interface EmotionResult {
-    mood: string;
-    moodScore: string;
-    summary: string;
+    primaryEmotion: string;
+    primaryScore: number;
+    summaries: string[];
+    keywords: string[];
 }
 
 interface UnifiedAnalysisResult {
@@ -154,7 +155,18 @@ export default function ChatContainer() {
             if (data.emotionAnalysis) {
                 const emo = data.emotionAnalysis;
 
-                replyText += `💬 [감정 분석]\n기분: ${emo.mood} (${emo.moodScore})\n${emo.summary}\n\n`;
+                replyText += `💬 [감정 분석]\n`;
+                replyText += `대표 감정: ${emo.primaryEmotion} (${safe(emo.primaryScore, 0)}점)\n\n`;
+
+                if (emo.summaries?.length > 0) {
+                    replyText += `📝 감정 흐름 요약:\n`;
+                    replyText += emo.summaries.map((s) => `- ${s}`).join("\n");
+                    replyText += "\n\n";
+                }
+
+                if (emo.keywords?.length > 0) {
+                    replyText += `🔖 주요 키워드: ${emo.keywords.join(", ")}\n\n`;
+                }
             }
 
             /* 결과 메시지 삽입 */

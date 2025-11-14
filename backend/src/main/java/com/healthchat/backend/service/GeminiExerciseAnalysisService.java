@@ -6,11 +6,13 @@ import com.healthchat.backend.dto.ExerciseAnalysisResult;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -20,40 +22,64 @@ public class GeminiExerciseAnalysisService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserRepository userRepository;
 
+    long start = System.currentTimeMillis();
     /**
      * 💪 사용자의 자연어 운동 입력 → Gemini JSON 파싱
      */
-    public ExerciseAnalysisResult analyzeExercise(Long userId, String userText) {
-        // ✅ 1. 사용자 정보 조회
+    @Async
+    public CompletableFuture<ExerciseAnalysisResult> analyzeExercise(Long userId, String userText) {
+
+        // 1) 사용자 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ 2. 프롬프트 생성
+        // 2) 프롬프트 생성
         String prompt = buildPrompt(user, userText);
 
-        // ✅ 3. Gemini 호출
+        // 3) Gemini 호출
         String response = geminiClient.generateJson("gemini-2.5-pro", prompt);
 
         if (response == null || response.isBlank()) {
             System.out.println("⚠️ Gemini 응답이 비어 있음 — fallback 사용");
-            return fallback();
+            return CompletableFuture.completedFuture(fallback());
         }
 
-        // ✅ 4. JSON 부분만 추출
+        // 4) JSON 추출
         String json = extractJson(response);
 
         try {
-            // ✅ 5. JSON 파싱 (단일 객체)
-            ExerciseAnalysisResult result = objectMapper.readValue(json, ExerciseAnalysisResult.class);
-            System.out.printf("✅ Gemini 운동 분석 완료: %s (%.0f kcal)\n",
-                    result.getAction(), result.getTotalCalories());
-            return result;
+            // 5) JSON → DTO 파싱
+            ExerciseAnalysisResult result =
+                    objectMapper.readValue(json, ExerciseAnalysisResult.class);
+
+            long took = System.currentTimeMillis() - start;
+
+            int duration = 0;
+            try {
+                Object raw = result.getTotalDuration();
+                if (raw != null) {
+                    duration = (int) Math.round(Double.parseDouble(raw.toString()));
+                }
+            } catch (Exception ignore) {}
+
+            System.out.printf(
+                    "✅ [Exercise] Gemini 운동 분석 완료: %s (%.0f kcal, %d분) — %dms%n",
+                    result.getAction(),
+                    result.getTotalCalories(),
+                    duration,
+                    took
+            );
+
+            return CompletableFuture.completedFuture(result);
+
         } catch (Exception e) {
             System.err.println("❌ Gemini JSON 파싱 실패: " + e.getMessage());
             System.err.println("⚠️ 원문 응답: " + response);
-            return fallback();
+
+            return CompletableFuture.completedFuture(fallback());
         }
     }
+
 
 
     private String buildPrompt(User user, String userText) {

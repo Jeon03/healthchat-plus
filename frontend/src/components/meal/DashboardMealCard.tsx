@@ -86,12 +86,15 @@ export default function DashboardMealCard() {
                         : {}
                 }
                 onClick={handleOpen}
-                className={`p-7 rounded-2xl border transition-all duration-300 select-none flex flex-col justify-between min-h-[180px]
-                    ${
+                className={`
+        p-7 rounded-2xl border transition-all duration-300 select-none flex flex-col 
+        justify-between min-h-[180px]
+        ${
                     meal
-                        ? "cursor-pointer bg-gradient-to-br from-gray-50/90 to-white/80 dark:from-gray-800/60 dark:to-gray-900/70 border-gray-300/40 dark:border-gray-700/50 shadow-lg hover:shadow-xl"
+                        ? "cursor-pointer bg-gradient-to-br from-green-50/90 to-white/80 dark:from-green-900/40 dark:to-gray-900/70 border-green-300/40 dark:border-green-700/50 shadow-lg hover:shadow-xl"
                         : "cursor-not-allowed bg-gray-200/40 dark:bg-gray-700/60 border-gray-400/30 opacity-70"
-                }`}
+                }
+    `}
             >
                 <div className="text-center">
                     <h3 className="text-xl font-bold text-green-500 dark:text-green-400 mb-4">

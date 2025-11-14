@@ -240,6 +240,14 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
                         exit={{ opacity: 0, x: slideDir > 0 ? -100 : 100 }}
                         transition={{ duration: 0.35, ease: "easeInOut" }}
                     >
+                        <div className="mt-8 flex justify-center mb-10">
+                            <NutritionDonut
+                                protein={totals.totalProtein}
+                                fat={totals.totalFat}
+                                carbs={totals.totalCarbs}
+                                size={240}
+                            />
+                        </div>
                         {/* ✅ 식단 테이블 */}
                         <div className="overflow-y-auto px-2" style={{ maxHeight: "calc(100vh - 260px)" }}>
                             <div className="flex justify-center">
@@ -289,14 +297,7 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
                                 · 탄수화물{" "}
                                 <span className="font-semibold text-green-500 dark:text-green-400">{totals.totalCarbs.toFixed(1)} g</span>
 
-                                <div className="mt-8 flex justify-center">
-                                    <NutritionDonut
-                                        protein={totals.totalProtein}
-                                        fat={totals.totalFat}
-                                        carbs={totals.totalCarbs}
-                                        size={240}
-                                    />
-                                </div>
+
                             </div>
                         </div>
                     </motion.div>

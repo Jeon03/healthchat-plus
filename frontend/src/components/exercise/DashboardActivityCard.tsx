@@ -104,7 +104,7 @@ export default function DashboardActivityCard() {
         justify-between min-h-[200px]
         ${
                     activity
-                        ? "cursor-pointer bg-gradient-to-br from-gray-50/90 to-white/80 dark:from-gray-800/60 dark:to-gray-900/70 border-gray-300/40 dark:border-gray-700/50 shadow-lg hover:shadow-xl"
+                        ? "cursor-pointer bg-gradient-to-br from-blue-50/90 to-white/80 dark:from-blue-900/40 dark:to-gray-900/70 border-blue-300/40 dark:border-blue-700/50 shadow-lg hover:shadow-xl"
                         : "cursor-not-allowed bg-gray-200/40 dark:bg-gray-700/60 border-gray-400/30 opacity-70"
                 }
     `}
