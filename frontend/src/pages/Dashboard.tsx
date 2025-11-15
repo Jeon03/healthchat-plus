@@ -31,9 +31,26 @@ export default function Dashboard() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [goalDetails, setGoalDetails] = useState<{ goal: string; factors: string[] }[]>([]);
     const [profileLoading, setProfileLoading] = useState(true);
-
+    const [coachLoading, setCoachLoading] = useState(false);
+    const [coachError, setCoachError] = useState<string | null>(null);
+    const [coachFeedback, setCoachFeedback] = useState<any | null>(null);
     const { shouldRefresh, setShouldRefresh } = useDashboard();
 
+    const fetchCoachFeedback = async () => {
+        setCoachLoading(true);
+        setCoachError(null);
+        setCoachFeedback(null);
+
+        try {
+            const res = await api.get("/coach/daily");   // 오늘 날짜 기준
+            setCoachFeedback(res.data);
+        } catch (e: any) {
+            setCoachError("피드백을 불러오지 못했습니다. 다시 시도해주세요.");
+            console.warn("AI 코치 API 오류:", e);
+        } finally {
+            setCoachLoading(false);
+        }
+    };
 
     const loadProfile = async () => {
         try {
@@ -267,13 +284,93 @@ export default function Dashboard() {
 
             </div>
             {/* ✅ AI 피드백 섹션 */}
-            <section className="mt-10 bg-gray-100/70 dark:bg-gray-800/70 rounded-2xl border border-gray-300/30 dark:border-gray-700/50 shadow-md hover:shadow-lg p-8 transition-all duration-300">
+            <section
+                className="mt-10 bg-gray-100/70 dark:bg-gray-800/70 rounded-2xl border border-gray-300/30 dark:border-gray-700/50 shadow-md p-8 transition-all duration-300"
+            >
                 <h3 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
                     🤖 AI 건강 코치 피드백
                 </h3>
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                    💡 운동량은 충분하지만, 단백질 섭취가 약간 부족해요. 내일은 계란이나 두부를 추가해보세요.
-                </p>
+
+                {/* 버튼 */}
+                <button
+                    onClick={fetchCoachFeedback}
+                    disabled={coachLoading}
+                    className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-md disabled:opacity-60"
+                >
+                    {coachLoading ? "피드백 생성 중..." : "AI 피드백 받기"}
+                </button>
+
+                {/* 로딩 상태 */}
+                {coachLoading && (
+                    <p className="mt-5 text-gray-600 dark:text-gray-300">잠시만 기다려주세요. AI가 분석 중입니다...</p>
+                )}
+
+                {/* 에러 */}
+                {coachError && (
+                    <p className="mt-5 text-red-500 dark:text-red-400">{coachError}</p>
+                )}
+
+                {/* 성공 출력 */}
+                {coachFeedback && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-6 space-y-6 bg-white/60 dark:bg-gray-900/50 p-6 rounded-xl border border-gray-300/30 dark:border-gray-700/40 shadow-sm"
+                    >
+                        <div>
+                            <h4 className="font-semibold text-lg mb-2 text-blue-600 dark:text-blue-400">📌 요약</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {coachFeedback.summary}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h4 className="font-semibold text-lg mb-2 text-green-600 dark:text-green-400">🥗 식단 조언</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {coachFeedback.dietAdvice}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h4 className="font-semibold text-lg mb-2 text-yellow-500 dark:text-yellow-400">🏃 운동 조언</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {coachFeedback.exerciseAdvice}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h4 className="font-semibold text-lg mb-2 text-pink-500 dark:text-pink-400">😊 감정 코칭</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {coachFeedback.emotionAdvice}
+                            </p>
+                        </div>
+
+                        <div>
+                            <h4 className="font-semibold text-lg mb-2 text-indigo-500 dark:text-indigo-400">🎯 목표 정렬 분석</h4>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {coachFeedback.goalAlignment}
+                            </p>
+                        </div>
+
+                        {/* 참고 근거 */}
+                        {coachFeedback.references?.length > 0 && (
+                            <div>
+                                <h4 className="font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200">
+                                    📚 참고한 가이드라인 근거
+                                </h4>
+                                <ul className="space-y-3">
+                                    {coachFeedback.references.map((ref: any, idx: number) => (
+                                        <li key={idx} className="p-3 bg-gray-200/60 dark:bg-gray-700/70 rounded-lg">
+                                            <p><strong>출처:</strong> {ref.source}</p>
+                                            <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{ref.snippet}</p>
+                                            <p className="text-xs mt-2 text-gray-500 dark:text-gray-400">{ref.comment}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                    </motion.div>
+                )}
             </section>
             <motion.section
                 initial={{ opacity: 0, y: 25 }}

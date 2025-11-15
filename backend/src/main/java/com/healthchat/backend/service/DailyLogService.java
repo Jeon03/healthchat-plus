@@ -14,30 +14,74 @@ public class DailyLogService {
     private final DailyLogRepository dailyLogRepository;
 
     /**
-     * ✅ 하루 통합 로그 업데이트 (식단 + 운동)
+     * ✅ (공통) 날짜 기반 로그 조회 또는 생성
      */
-    public DailyLog updateDailyLog(User user, DailyMeal meal, DailyActivity activity) {
+    public DailyLog getOrCreate(User user, LocalDate date) {
+        return dailyLogRepository.findByUserIdAndDate(user.getId(), date)
+                .orElseGet(() ->
+                        dailyLogRepository.save(
+                                DailyLog.builder()
+                                        .user(user)
+                                        .date(date)
+                                        .build()
+                        )
+                );
+    }
+
+    /**
+     * ✅ 하루 식단 업데이트
+     */
+    public DailyLog updateMeal(User user, DailyMeal meal) {
         LocalDate today = LocalDate.now();
 
-        // ✅ 오늘 로그 찾기 (없으면 새로 생성)
-        DailyLog log = dailyLogRepository.findByUserIdAndDate(user.getId(), today)
-                .orElse(DailyLog.builder()
-                        .user(user)
-                        .date(today)
-                        .build());
-
-        // ✅ 식단 및 운동 데이터 업데이트
+        DailyLog log = getOrCreate(user, today);
         log.setMeal(meal);
-        log.setActivity(activity);
 
-        double mealCalories = (meal != null) ? meal.getTotalCalories() : 0;
-        double exerciseCalories = (activity != null) ? activity.getTotalCalories() : 0;
-        double exerciseTime = (activity != null) ? activity.getTotalDuration() : 0;
-
-        // ✅ 하루 요약 통계 계산
-        log.setTotalCalories(mealCalories - exerciseCalories);
-        log.setTotalExerciseTime(exerciseTime);
+        recalcSummary(log);
 
         return dailyLogRepository.save(log);
+    }
+
+    /**
+     * ✅ 하루 운동 업데이트
+     */
+    public DailyLog updateActivity(User user, DailyActivity activity) {
+        LocalDate today = LocalDate.now();
+
+        DailyLog log = getOrCreate(user, today);
+        log.setActivity(activity);
+
+        recalcSummary(log);
+
+        return dailyLogRepository.save(log);
+    }
+
+    /**
+     * ✅ 하루 감정(DailyEmotion) 업데이트
+     */
+    public DailyLog updateEmotion(User user, DailyEmotion emotion) {
+        LocalDate today = LocalDate.now();
+
+        DailyLog log = getOrCreate(user, today);
+        log.setEmotion(emotion);
+
+        // 감정 요약 자동 계산 가능 (primaryEmotion 기반)
+        if (emotion.getPrimaryEmotion() != null) {
+            log.setMoodSummary(emotion.getPrimaryEmotion());
+        }
+
+        return dailyLogRepository.save(log);
+    }
+
+    /**
+     * ✅ (중요) 하루 통합 요약 계산
+     */
+    private void recalcSummary(DailyLog log) {
+        double mealCalories = (log.getMeal() != null) ? log.getMeal().getTotalCalories() : 0;
+        double exerciseCalories = (log.getActivity() != null) ? log.getActivity().getTotalCalories() : 0;
+        double exerciseTime = (log.getActivity() != null) ? log.getActivity().getTotalDuration() : 0;
+
+        log.setTotalCalories(mealCalories - exerciseCalories);
+        log.setTotalExerciseTime(exerciseTime);
     }
 }

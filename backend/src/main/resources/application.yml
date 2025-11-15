@@ -98,18 +98,28 @@ app:
     secure: false
     same-site: Lax
 
+#gemini:
+#  api:
+#    key: ${GEMINI_API_KEY}             # .env 또는 환경변수에 저장된 Google AI Studio API 키
+#    base-url: https://generativelanguage.googleapis.com/v1beta/models
+#  model:
+#    default: gemini-2.5-flash
+#    flash: gemini-2.5-flash
+#    pro: gemini-2.5-pro             # 빠른 응답용 (선택)
+#  timeout:
+#    connect: 5000
+#    read: 10000
+
 gemini:
   api:
-    key: ${GEMINI_API_KEY}             # .env 또는 환경변수에 저장된 Google AI Studio API 키
+    key: ${GEMINI_API_KEY}
     base-url: https://generativelanguage.googleapis.com/v1beta/models
   model:
-    default: gemini-2.5-flash
     flash: gemini-2.5-flash
-    pro: gemini-2.5-pro             # 빠른 응답용 (선택)
+    pro: gemini-2.5-pro
+    embed: gemini-embedding-001
+
   timeout:
     connect: 5000
     read: 10000
 
-edamam:
-  app-id: ${EDAMAM_APP_ID}
-  app-key: ${EDAMAM_APP_KEY}

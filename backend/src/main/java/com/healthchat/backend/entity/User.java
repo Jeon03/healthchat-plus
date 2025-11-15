@@ -1,11 +1,15 @@
 package com.healthchat.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -72,4 +76,41 @@ public class User {
     /** ✅ 사용자가 직접 작성한 자유 목표 문장 */
     @Column(columnDefinition = "TEXT")
     private String goalText;
+
+
+    /* ==========================================================
+     * ⭐ 목표 JSON 파싱 헬퍼 메서드
+     * ========================================================== */
+
+    @JsonIgnore
+    public List<GoalDetail> getParsedGoals() {
+        if (goalsDetailJson == null || goalsDetailJson.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(
+                    goalsDetailJson,
+                    mapper.getTypeFactory()
+                            .constructCollectionType(List.class, GoalDetail.class)
+            );
+        } catch (Exception e) {
+            // 파싱 실패 시 빈 리스트 반환
+            return Collections.emptyList();
+        }
+    }
+
+    /* ==========================================================
+     * ⭐ 목표 요소 구조
+     * ========================================================== */
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class GoalDetail {
+        private String goal;           // 예: "체중 감량"
+        private List<String> factors;  // 예: ["시간 부족", "식욕 참기 어려움"]
+    }
 }

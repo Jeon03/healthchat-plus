@@ -78,8 +78,16 @@ public class GeminiUnifiedAnalysisService {
             emotionSummaryDto = dailyEmotionService.toSummaryDto(savedEmotion);
         }
 
-        // 7️⃣ 하루 종합 로그 업데이트
-        dailyLogService.updateDailyLog(user, savedMeal, savedActivity);
+        // 7️⃣ DailyLog 업데이트
+        if (savedMeal != null) {
+            dailyLogService.updateMeal(user, savedMeal);
+        }
+        if (savedActivity != null) {
+            dailyLogService.updateActivity(user, savedActivity);
+        }
+        if (savedEmotion != null) {
+            dailyLogService.updateEmotion(user, savedEmotion);
+        }
 
         // 8️⃣ 최종 통합 응답
         return UnifiedAnalysisResult.builder()

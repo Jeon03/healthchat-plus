@@ -49,6 +49,7 @@ public class SecurityConfig {
                                 "/api/chat/**",
                                 "/api/ai/**"
                         ).permitAll()
+                        .requestMatchers("/api/coach/**").authenticated()
                         .anyRequest().authenticated()
                 )
 
