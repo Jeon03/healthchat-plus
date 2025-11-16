@@ -19,4 +19,5 @@ public class EmotionSummaryDto {
     private List<List<String>> keywords;
 
     private String rawText;
+    private String date;
 }

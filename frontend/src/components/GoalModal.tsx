@@ -1,6 +1,7 @@
 import type {Variants} from "framer-motion";
 import {AnimatePresence, motion} from "framer-motion";
 import GoalStepDetail from "./GoalStepDetail.tsx";
+import {LuTarget} from "react-icons/lu";
 
 type Props = {
     step: "main" | "detail";
@@ -62,7 +63,6 @@ export default function GoalModal({
         if (!trimmed) return;
 
         const details = [{ goal: "기타 (직접 입력)", factors: [trimmed] }];
-        console.log("📝 기타 목표 저장됨:", details);
         onSave(details, trimmed);
         onClose(); // 모달 닫기
     };
@@ -102,8 +102,9 @@ export default function GoalModal({
                                     transition: { duration: 0.22, ease: [0.4, 0, 1, 1] },
                                 }}
                             >
-                                <h3 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100">
-                                    🎯 목표 설정
+                                <h3 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <LuTarget className="w-6 h-6 text-pink-500" />
+                                    목표 설정
                                 </h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
                                     최대 <b>3가지</b>까지 선택할 수 있어요.<br />

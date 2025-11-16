@@ -138,6 +138,7 @@ public class DailyEmotionService {
                 .summaries(summaries)
                 .keywords(keywords)
                 .rawText(e.getRawText())
+                .date(e.getDate().toString())
                 .build();
     }
 }

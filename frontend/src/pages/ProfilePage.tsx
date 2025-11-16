@@ -1,21 +1,45 @@
-import {useEffect, useMemo, useState} from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios";
-import {toast} from "react-toastify";
-import {useNavigate} from "react-router-dom";
+import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 import GoalModal from "../components/GoalModal";
 
+import {
+    LuUser,
+    LuCalendar,
+    LuRuler,
+    LuWeight,
+    LuTarget,
+    LuPill,
+    LuDna,
+    LuAlarmClock,
+} from "react-icons/lu";
+
+function SectionTitle({
+                          icon,
+                          title,
+                      }: {
+    icon: React.ReactNode;
+    title: string;
+}) {
+    return (
+        <h3 className="flex items-center gap-2 text-xl font-semibold mb-2 text-gray-800 dark:text-gray-200">
+            {icon}
+            {title}
+        </h3>
+    );
+}
 export default function ProfilePage() {
     const navigate = useNavigate();
+
     const [loading, setLoading] = useState(true);
     const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
 
-    // ✅ 목표 관련 상태
     const [step, setStep] = useState<"main" | "detail">("main");
     const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-    const [goalDetails, setGoalDetails] = useState<any[]>([]); // [{goal, factors: []}]
-    const [goalText, setGoalText] = useState(""); // 자유입력 목표 텍스트
+    const [goalDetails, setGoalDetails] = useState<any[]>([]);
+    const [goalText, setGoalText] = useState("");
 
-    // ✅ 프로필 폼
     const [form, setForm] = useState({
         nickname: "",
         gender: "",
@@ -27,78 +51,69 @@ export default function ProfilePage() {
         goalWeight: "",
         avgSleep: "",
     });
+
+    /** 기타 목표 자동 정리 */
     useEffect(() => {
         const hasCustom = selectedGoals.includes("기타 (직접 입력)");
         if (!hasCustom) {
-            // 기타 텍스트 비우고, details에서 기타 항목 삭제
             setGoalText("");
             setGoalDetails((prev) => prev.filter((d: any) => d.goal !== "기타 (직접 입력)"));
         }
     }, [selectedGoals]);
-    /** ✅ 기존 프로필 불러오기 */
+
+    /** 프로필 불러오기 */
     useEffect(() => {
         (async () => {
             try {
                 const res = await api.get("/user/profile");
-                console.log("📦 백엔드 응답 데이터:", res.data);
 
                 if (res.data) {
-                    // 1) 기본 폼 세팅
                     setForm((prev) => ({
                         ...prev,
                         ...Object.fromEntries(Object.entries(res.data).map(([k, v]) => [k, v ?? ""])),
                         birthDate: res.data.birthDate ?? "",
                     }));
 
-                    // 2) 목표/세부요인 복원
                     let parsedDetails: Array<{ goal: string; factors: string[] }> = [];
                     try {
                         if (res.data.goalsDetailJson) {
                             parsedDetails = JSON.parse(res.data.goalsDetailJson);
                             if (!Array.isArray(parsedDetails)) parsedDetails = [];
                         }
-                    } catch (e) {
-                        console.warn("goalsDetailJson 파싱 실패:", e);
+                    } catch {
                         parsedDetails = [];
                     }
+
                     setGoalDetails(parsedDetails);
+                    setSelectedGoals(parsedDetails.map((d) => d.goal));
 
-                    // 3) 선택된 목표 복원
-                    const restoredGoals = parsedDetails.map((d) => d.goal);
-                    setSelectedGoals(restoredGoals);
-
-                    // 4) 자유입력 목표 복원 (기타 처리)
                     if (res.data.goalText && !res.data.goalsDetailJson) {
-                        // 세부요인이 없고 자유 입력만 있는 케이스 → '기타' 상태로 복원
                         setGoalText(res.data.goalText);
                         setSelectedGoals(["기타 (직접 입력)"]);
                     } else if (res.data.goalText) {
-                        // 세부요인도 있고 추가 설명도 있는 케이스 → 그냥 텍스트만 세팅
                         setGoalText(res.data.goalText);
                     }
                 }
             } catch {
-                console.warn("⚠️ 프로필 정보가 없습니다. 새로 작성합니다.");
+                console.warn("프로필 없음 → 신규 작성");
             } finally {
                 setLoading(false);
             }
         })();
     }, []);
 
-    /** ✅ 나이 계산 */
+    /** 나이 계산 */
     const age = useMemo(() => {
         if (!form.birthDate) return "";
         const birth = new Date(form.birthDate);
         const today = new Date();
-        let calculated = today.getFullYear() - birth.getFullYear();
-        const monthDiff = today.getMonth() - birth.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-            calculated--;
-        }
-        return calculated;
+        let a = today.getFullYear() - birth.getFullYear();
+        const md = today.getMonth() - birth.getMonth();
+        if (md < 0 || (md === 0 && today.getDate() < birth.getDate())) a--;
+        return a;
     }, [form.birthDate]);
 
-    /** ✅ 입력 변경 처리 */
+    /** 값 변경 */
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
     ) => {
@@ -106,13 +121,11 @@ export default function ProfilePage() {
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    /** 목표 저장 */
     const handleGoalSave = (details: any[], text: string) => {
-        console.log("🎯 목표 저장됨 (새로운 details):", details, text);
-
         const weightGoals = ["체중 감량", "체중 유지", "체중 증가"];
         const hasCustomGoal = details.some((d) => d.goal === "기타 (직접 입력)");
 
-        // 1️⃣ '기타' 단독 처리
         if (hasCustomGoal) {
             setGoalDetails([{ goal: "기타 (직접 입력)", factors: [text] }]);
             setGoalText(text);
@@ -120,105 +133,83 @@ export default function ProfilePage() {
             return;
         }
 
-        // 2️⃣ 체중 관련 목표는 1개만
         const uniqueWeight = details.filter((d) => weightGoals.includes(d.goal));
         const weightGoal = uniqueWeight.length > 0 ? [uniqueWeight[0]] : [];
 
-        // 3️⃣ 일반 목표
         const normalGoals = details.filter(
             (d) => !weightGoals.includes(d.goal) && d.goal !== "기타 (직접 입력)"
         );
 
-        // 4️⃣ 최종 병합 (체중 1개 + 일반 ≤3개)
         const merged = [...weightGoal, ...normalGoals].slice(0, 3);
 
-        // 5️⃣ 상태 업데이트
         setGoalDetails(merged);
         setGoalText("");
         setIsGoalModalOpen(false);
-
-        console.log("✅ 최종 저장된 goalDetails:", merged);
     };
 
-
-    /** ✅ 프로필 저장 */
+    /** 저장 */
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // ⚠️ 목표 미설정 시 저장 차단
         if (goalDetails.length === 0 && !goalText.trim()) {
-            toast.error("목표를 설정해야 프로필을 저장할 수 있습니다 🎯");
+            toast.error("목표를 설정해야 저장할 수 있습니다 🎯");
             return;
         }
 
-        // ✅ 전송할 payload
         const payload = {
             ...form,
             goalsDetailJson: JSON.stringify(goalDetails),
-            goalText: goalText,
+            goalText,
         };
-
-        console.log("📤 [백엔드 전송 데이터]");
-        console.log(JSON.stringify(payload, null, 2));
 
         try {
             await api.post("/user/profile", payload);
             toast.success("프로필이 저장되었습니다 🎉");
-            setTimeout(() => navigate("/dashboard"), 1500);
-        } catch (err) {
-            console.error("❌ 프로필 저장 실패:", err);
-            toast.error("저장 실패 😢 다시 시도해주세요");
+            setTimeout(() => navigate("/dashboard"), 1200);
+        } catch {
+            toast.error("저장 실패. 다시 시도해주세요.");
         }
     };
 
+    /** 목표 선택 */
     const toggleGoal = (goal: string) => {
         const weightGoals = ["체중 감량", "체중 유지", "체중 증가"];
 
-        // ✅ 1️⃣ 기타 (직접 입력)
         if (goal === "기타 (직접 입력)") {
-            if (selectedGoals.includes("기타 (직접 입력)")) {
-                // 이미 선택된 경우 → 해제
-                setSelectedGoals([]);
-            } else {
-                // 새로 선택 → 다른 모든 목표 해제 후 단독 선택
-                setSelectedGoals(["기타 (직접 입력)"]);
-            }
+            if (selectedGoals.includes(goal)) setSelectedGoals([]);
+            else setSelectedGoals([goal]);
             return;
         }
 
-        // ✅ 2️⃣ 기타가 이미 선택된 상태에서 일반 목표 클릭 → 기타 해제 후 일반 목표 선택
         if (selectedGoals.includes("기타 (직접 입력)")) {
             setSelectedGoals([goal]);
             return;
         }
 
-        // ✅ 3️⃣ 체중 관련 목표 (감량·유지·증가)는 하나만 선택 가능
         if (weightGoals.includes(goal)) {
-            const filtered = selectedGoals.filter(
-                (g) => !weightGoals.includes(g)
-            );
-            if (selectedGoals.includes(goal)) {
-                // 이미 선택된 체중 목표 다시 클릭 시 해제
-                setSelectedGoals(filtered);
-            } else {
-                // 새로운 체중 목표 선택
-                setSelectedGoals([...filtered, goal]);
-            }
+            const filtered = selectedGoals.filter((g) => !weightGoals.includes(g));
+            if (selectedGoals.includes(goal)) setSelectedGoals(filtered);
+            else setSelectedGoals([...filtered, goal]);
             return;
         }
 
-        // ✅ 4️⃣ 일반 목표 (최대 3개 제한, 다시 클릭 시 해제)
         if (selectedGoals.includes(goal)) {
-            // 다시 클릭 시 해제
             setSelectedGoals(selectedGoals.filter((g) => g !== goal));
         } else if (selectedGoals.length < 3) {
-            // 3개 이하일 때 추가 가능
             setSelectedGoals([...selectedGoals, goal]);
         }
     };
 
+    /** 저장 비활성화 조건 */
+    const isSaveDisabled =
+        !form.nickname ||
+        !form.gender ||
+        !form.birthDate ||
+        !form.height ||
+        !form.weight ||
+        (goalDetails.length === 0 && !goalText.trim());
 
-    const handleNext = () => setStep("detail");
+
 
     if (loading) {
         return (
@@ -228,46 +219,39 @@ export default function ProfilePage() {
         );
     }
 
-    /** ✅ 저장 버튼 비활성화 조건 */
-    const isSaveDisabled =
-        !form.nickname ||
-        !form.gender ||
-        !form.birthDate ||
-        !form.height ||
-        !form.weight ||
-        (goalDetails.length === 0 && !goalText.trim());
-
     return (
-        <div className="px-6 py-10 max-w-xl mx-auto">
-            <h2 className="text-3xl font-bold mb-10 text-gray-800 dark:text-gray-100">
+        <div className="px-6 py-12 max-w-2xl mx-auto">
+
+            {/* 제목 */}
+            <h2 className="text-3xl font-bold mb-10 text-gray-800 dark:text-gray-100 tracking-tight">
                 프로필 설정
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                {/* ✅ 닉네임 */}
+            {/* 메인 카드 */}
+            <form
+                onSubmit={handleSubmit}
+                className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-8 space-y-8"
+            >
+                {/* 닉네임 */}
                 <div>
-                    <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        닉네임
-                    </label>
+                    <SectionTitle icon={<LuUser className="text-blue-500" />} title="닉네임" />
                     <input
                         name="nickname"
                         value={form.nickname}
                         onChange={handleChange}
-                        className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
                         required
                     />
                 </div>
 
-                {/* ✅ 성별 */}
+                {/* 성별 */}
                 <div>
-                    <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        성별
-                    </label>
+                    <SectionTitle icon={<LuUser className="text-pink-500" />} title="성별" />
                     <select
                         name="gender"
                         value={form.gender}
                         onChange={handleChange}
-                        className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
                         required
                     >
                         <option value="">성별 선택</option>
@@ -277,18 +261,16 @@ export default function ProfilePage() {
                     </select>
                 </div>
 
-                {/* ✅ 생년월일 + 나이 */}
+                {/* 생년월일 */}
                 <div>
-                    <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        생년월일
-                    </label>
+                    <SectionTitle icon={<LuCalendar className="text-indigo-500" />} title="생년월일" />
                     <div className="flex items-center gap-4">
                         <input
                             name="birthDate"
                             type="date"
-                            value={form.birthDate || ""}
+                            value={form.birthDate}
                             onChange={handleChange}
-                            className="flex-1 border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="flex-1 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none"
                             required
                         />
                         {age && (
@@ -299,25 +281,22 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* ✅ 키 / 몸무게 / 목표 체중 / 수면 */}
+                {/* 키/몸무게/목표체중/평균수면 */}
                 {[
-                    { name: "height", label: "키", unit: "cm", required: true },
-                    { name: "weight", label: "몸무게", unit: "kg", required: true },
-                    { name: "goalWeight", label: "목표 체중", unit: "kg" },
-                    { name: "avgSleep", label: "평균 수면 시간", unit: "시간" },
-                ].map(({ name, label, unit, required }) => (
+                    { name: "height", label: "키", unit: "cm", icon: <LuRuler /> },
+                    { name: "weight", label: "몸무게", unit: "kg", icon: <LuWeight /> },
+                    { name: "goalWeight", label: "목표 체중", unit: "kg", icon: <LuTarget /> },
+                    { name: "avgSleep", label: "평균 수면", unit: "시간", icon: <LuAlarmClock /> },
+                ].map(({ name, label, unit, icon }) => (
                     <div key={name}>
-                        <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                            {label}
-                        </label>
+                        <SectionTitle icon={icon} title={label} />
                         <div className="relative">
                             <input
-                                name={name}
                                 type="number"
+                                name={name}
                                 value={(form as any)[name]}
                                 onChange={handleChange}
-                                className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 pr-12 bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
-                                required={required}
+                                className="w-full px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none pr-12"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
                                 {unit}
@@ -326,57 +305,48 @@ export default function ProfilePage() {
                     </div>
                 ))}
 
-                {/* ✅ 알레르기 정보 */}
+                {/* 알레르기 */}
                 <div>
-                    <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        알레르기 정보
-                    </label>
+                    <SectionTitle icon={<LuDna className="text-orange-500" />} title="알레르기" />
                     <textarea
                         name="allergiesText"
                         value={form.allergiesText}
                         onChange={handleChange}
-                        placeholder="예: 우유, 계란, 새우 알레르기 있음"
-                        className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 h-24 resize-none bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full h-24 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                     />
                 </div>
 
-                {/* ✅ 복용 중인 약 */}
+                {/* 복용약 */}
                 <div>
-                    <label className="block mb-2 text-gray-700 dark:text-gray-300 font-medium">
-                        복용 중인 약
-                    </label>
+                    <SectionTitle icon={<LuPill className="text-green-500" />} title="복용 중인 약" />
                     <textarea
                         name="medicationsText"
                         value={form.medicationsText}
                         onChange={handleChange}
-                        placeholder="예: 고혈압약, 비타민 D, 오메가3"
-                        className="w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 h-24 resize-none bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full h-24 px-4 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                     />
                 </div>
-                {/* ✅ 나의 목표 요약 */}
-                {(goalDetails.length > 0 || goalText.trim()) && (
-                    <div className="mt-10 p-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">
-                            🎯 나의 목표
-                        </h3>
 
-                        {/* ✅ 기타(직접 입력) */}
+                {/* 목표 요약 */}
+                {(goalDetails.length > 0 || goalText.trim()) && (
+                    <div className="p-5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                        <SectionTitle icon={<LuTarget className="text-pink-500" />} title="나의 목표" />
+
                         {goalDetails.some((g) => g.goal === "기타 (직접 입력)") ? (
-                            <p className="text-gray-700 dark:text-gray-300 text-base whitespace-pre-line leading-relaxed">
-                                {goalText || "직접 입력한 목표가 없습니다."}
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                                {goalText}
                             </p>
                         ) : (
-                            /* ✅ 일반 목표 */
                             <div className="space-y-4">
-                                {goalDetails.map(({ goal, factors }, idx) => (
-                                    <div key={idx}>
-                                        <p className="font-medium text-blue-600 dark:text-blue-400 mb-2">
+                                {goalDetails.map(({ goal, factors }: any, i: number) => (
+                                    <div key={i}>
+                                        <p className="font-medium text-blue-600 dark:text-blue-400 mb-1">
                                             • {goal}
                                         </p>
-                                        {factors && factors.length > 0 && (
-                                            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-                                                {factors.map((f: string, i: number) => (
-                                                    <li key={i}>{f}</li>
+                                        {factors?.length > 0 && (
+                                            <ul className="list-disc list-inside text-gray-700 dark:text-gray-300 text-sm">
+                                                {factors.map((f: string, idx: number) => (
+                                                    <li key={idx}>{f}</li>
                                                 ))}
                                             </ul>
                                         )}
@@ -387,40 +357,75 @@ export default function ProfilePage() {
                     </div>
                 )}
 
-                {/* ✅ 버튼 영역 */}
-                <div className="mt-8">
+                {/* 버튼 영역 */}
+                <div className="pt-4 space-y-4">
+
+                    {/* 🎯 목표 설정하기 버튼 — 저장하기와 동일한 AI 스타일 */}
                     <button
                         type="button"
                         onClick={() => setIsGoalModalOpen(true)}
-                        className="w-full px-5 py-3 bg-green-600 text-white rounded-md font-medium hover:bg-green-700 transition mb-4"
+                        className="
+            w-full px-5 py-3 rounded-xl font-semibold
+            bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600
+            dark:from-indigo-500 dark:via-blue-500 dark:to-indigo-500
+            text-white
+            shadow-lg shadow-blue-500/30
+            hover:shadow-blue-400/50
+            hover:scale-[1.02]
+            active:scale-95
+            transition-all duration-300
+        "
                     >
                         목표 설정하기
                     </button>
+
                     <div className="grid grid-cols-2 gap-3">
+
+                        {/* 취소 버튼 — Glassmorphism */}
                         <button
                             type="button"
                             onClick={() => navigate("/dashboard")}
-                            className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition"
+                            className="
+                px-5 py-3 rounded-xl font-medium
+                bg-white/60 dark:bg-gray-800/40
+                border border-gray-300/40 dark:border-gray-700/40
+                text-gray-700 dark:text-gray-200
+                backdrop-blur-md
+                hover:bg-white/80 dark:hover:bg-gray-700/50
+                transition-all duration-300
+            "
                         >
                             취소
                         </button>
 
+                        {/* 저장하기 버튼 */}
                         <button
                             type="submit"
                             disabled={isSaveDisabled}
-                            className={`px-5 py-2 rounded-md font-medium transition ${
+                            className={`
+                px-5 py-3 rounded-xl font-semibold transition-all duration-300
+                ${
                                 isSaveDisabled
-                                    ? "bg-gray-400 text-white cursor-not-allowed"
-                                    : "bg-blue-600 text-white hover:bg-blue-700"
-                            }`}
+                                    ? "bg-gray-300 dark:bg-gray-700 text-gray-500 cursor-not-allowed"
+                                    : `
+                            bg-gradient-to-r from-indigo-600 via-blue-600 to-indigo-600
+                            dark:from-indigo-500 dark:via-blue-500 dark:to-indigo-500
+                            text-white
+                            shadow-lg shadow-blue-500/30
+                            hover:shadow-blue-400/50
+                            hover:scale-[1.02]
+                          `
+                            }
+            `}
                         >
                             저장하기
                         </button>
                     </div>
                 </div>
+
             </form>
 
-            {/* ✅ GoalModal */}
+            {/* 목표 모달 */}
             {isGoalModalOpen && (
                 <GoalModal
                     step={step}
@@ -430,10 +435,10 @@ export default function ProfilePage() {
                     toggleGoal={toggleGoal}
                     customGoal={goalText}
                     setCustomGoal={setGoalText}
-                    handleNext={handleNext}
-                    onClose={() => setIsGoalModalOpen(false)}
-                    onSave={handleGoalSave}
+                    handleNext={() => setStep("detail")}
                     existingDetails={goalDetails}
+                    onSave={handleGoalSave}
+                    onClose={() => setIsGoalModalOpen(false)}
                 />
             )}
         </div>

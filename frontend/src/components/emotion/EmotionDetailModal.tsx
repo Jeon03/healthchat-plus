@@ -46,7 +46,6 @@ const EMOTION_COLORS: Record<string, string> = {
 };
 export default function EmotionDetailModal({ emotion, onClose }: Props) {
 
-    /** ⭐ 안전한 초기 날짜 처리 */
     const initialDate = emotion?.date ? new Date(emotion.date) : new Date();
 
     const [current, setCurrent] = useState<EmotionSummaryDto | null>(emotion);
@@ -56,9 +55,9 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
     useEffect(() => {
         setCurrent(emotion);
 
-        /** ⭐ useEffect에서도 안전 처리 */
         if (emotion?.date) {
-            setCurrentDate(new Date(emotion.date));
+            const localDate = dayjs(emotion.date).format("YYYY-MM-DD");
+            setCurrentDate(new Date(localDate));
         } else {
             setCurrentDate(new Date());
         }

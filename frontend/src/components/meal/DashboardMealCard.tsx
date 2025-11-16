@@ -2,8 +2,13 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import api from "../../api/axios";
 import MealDetailModal from "./MealDetailModal";
-import {useDashboard} from "../../context/DashboardContext.tsx";
+import { useDashboard } from "../../context/DashboardContext.tsx";
+import dayjs from "dayjs";
+import { LuSalad } from "react-icons/lu";
 
+interface Props {
+    onLoaded?: (v: boolean) => void;
+}
 export interface DailyMeal {
     date: string;
     totalCalories: number;
@@ -13,93 +18,111 @@ export interface DailyMeal {
     mealsJson: string;
 }
 
-export default function DashboardMealCard() {
+export default function DashboardMealCard({ onLoaded }: Props) {
     const [meal, setMeal] = useState<DailyMeal | null>(null);
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // ⭐ 전역 상태로부터 자동갱신 플래그 가져오기
+    const [lastMeal, setLastMeal] = useState<DailyMeal | null>(null);
+
+    // 글로벌 refresh
     const { shouldRefresh, setShouldRefresh } = useDashboard();
 
-    /** ✅ 오늘 식단 데이터 로드 */
     const fetchMeal = async () => {
         try {
             const res = await api.get<DailyMeal>("/ai/meals/today");
 
-            if (res.data && typeof res.data === "object" && Object.keys(res.data).length > 0) {
+            if (res.data && res.data.mealsJson) {
                 setMeal(res.data);
+                onLoaded?.(true);   // 🔥 오늘 데이터 있음
             } else {
                 setMeal(null);
+                onLoaded?.(false);  // 🔥 오늘 데이터 없음
             }
-        } catch (err) {
-            console.warn("❌ 식단 정보를 불러오지 못했습니다.", err);
+        } catch {
             setMeal(null);
+            onLoaded?.(false);
         } finally {
             setLoading(false);
         }
     };
 
-    // ✅ 첫 렌더링 시 오늘 식단 불러오기
+    /** 🔥 가장 최근 기록 탐색 */
+    const findLastAvailableMeal = async () => {
+        let offset = 1;
+        while (offset < 30) {
+            const date = dayjs().subtract(offset, "day").format("YYYY-MM-DD");
+            try {
+                const res = await api.get(`/ai/meals/${date}`);
+                if (res.data && res.data.mealsJson) {
+                    setLastMeal(res.data);
+                    return;
+                }
+            } catch {}
+            offset++;
+        }
+        setLastMeal(null);
+    };
+
+    /** 최초 렌더 → 오늘 식단 확인 */
     useEffect(() => {
         fetchMeal();
+        findLastAvailableMeal();
     }, []);
 
-    // ⭐⭐ AI 입력 → setShouldRefresh(true) → 이 부분이 자동 실행됨
+    /** AI 입력 후 자동 새로고침 */
     useEffect(() => {
         if (shouldRefresh) {
-            console.log("🔥 DashboardMealCard 갱신 감지 → 식단 다시 불러오기");
             fetchMeal();
-            setShouldRefresh(false); // 플래그 리셋
+            setShouldRefresh(false);
         }
     }, [shouldRefresh]);
 
-    // 모달 열기/닫기 제어
     useEffect(() => {
-        if (open) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "auto";
-        }
+        document.body.style.overflow = open ? "hidden" : "auto";
         return () => {
             document.body.style.overflow = "auto";
         };
     }, [open]);
 
+    /** 클릭 시 항상 모달 오픈 */
     const handleOpen = () => {
-        if (!loading && meal) setOpen(true);
+        if (!loading) setOpen(true);
     };
+
+    /** 모달에 넘길 데이터 = 오늘 데이터 있으면 today, 없으면 최근 기록 */
+    const modalMeal = meal ?? lastMeal;
 
     return (
         <>
+            {/* 🔥 카드 (meal 없어도 동일 스타일) */}
             <motion.div
                 initial={{ opacity: 0, y: 25, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                whileHover={
-                    meal
-                        ? {
-                            scale: 1.03,
-                            boxShadow:
-                                "0 12px 28px rgba(34,197,94,0.25), 0 0 20px rgba(74,222,128,0.3)",
-                            transition: { duration: 0.3 },
-                        }
-                        : {}
-                }
+                whileHover={{
+                    scale: 1.03,
+                    transition: { duration: 0.3 },
+                    boxShadow:
+                        "0 12px 28px rgba(34,197,94,0.25), 0 0 20px rgba(74,222,128,0.3)",
+                }}
                 onClick={handleOpen}
-                className={`
-        p-7 rounded-2xl border transition-all duration-300 select-none flex flex-col 
-        justify-between min-h-[180px]
-        ${
-                    meal
-                        ? "cursor-pointer bg-gradient-to-br from-green-50/90 to-white/80 dark:from-green-900/40 dark:to-gray-900/70 border-green-300/40 dark:border-green-700/50 shadow-lg hover:shadow-xl"
-                        : "cursor-not-allowed bg-gray-200/40 dark:bg-gray-700/60 border-gray-400/30 opacity-70"
-                }
-    `}
+                className="
+                    p-7 rounded-2xl border transition-all duration-300 select-none
+                    flex flex-col justify-between min-h-[180px] cursor-pointer
+                    bg-gradient-to-br from-green-50/90 to-white/80
+                    dark:from-green-900/40 dark:to-gray-900/70
+                    border-green-300/40 dark:border-green-700/50
+                    shadow-lg hover:shadow-xl
+                "
             >
                 <div className="text-center">
-                    <h3 className="text-xl font-bold text-green-500 dark:text-green-400 mb-4">
-                        🥗 오늘의 식단 요약
-                    </h3>
+                    <div className="flex justify-center">
+                        <h3 className="text-xl font-bold text-green-500 dark:text-green-400 mb-4 flex items-center gap-2">
+                            <LuSalad className="w-6 h-6" />
+                            오늘의 식단 요약
+                        </h3>
+                    </div>
 
                     {loading ? (
                         <p className="text-gray-500">불러오는 중...</p>
@@ -126,40 +149,41 @@ export default function DashboardMealCard() {
                             </p>
                         </>
                     ) : (
-                        <p className="text-gray-600 dark:text-gray-400 text-base">
-                            오늘의 식단이 아직 등록되지 않았어요 🍱
-                        </p>
+                        <div className="py-6">
+                            <p className="text-gray-600 dark:text-gray-400 text-base leading-relaxed text-center mt-1">
+                                오늘의 식단이 아직<br />
+                                등록되지 않았어요!<br />
+                                클릭하면 최근 기록을<br />
+                                보여드릴게요!
+                            </p>
+                        </div>
                     )}
                 </div>
             </motion.div>
 
+            {/* 🔥 모달 (today 없으면 lastMeal로 표시) */}
             <AnimatePresence>
-                {open && meal && (
+                {open && modalMeal && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.25 }}
-                        className="
-                fixed inset-0 z-50 bg-black/50 backdrop-blur-sm
-                flex justify-center items-center
-            "
+                        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex justify-center items-center"
                     >
                         <motion.div
                             initial={{ y: 40, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 40, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeOut' }}
-                            className="
-                    w-full max-w-4xl mx-auto px-4
-                    max-h-[90vh] overflow-y-auto
-                "
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="w-full max-w-4xl mx-auto px-4 max-h-[90vh] overflow-y-auto"
                         >
                             <MealDetailModal
-                                meal={meal}
+                                meal={modalMeal}
                                 onClose={() => setOpen(false)}
                                 onUpdated={(updated) => {
-                                    setMeal(updated);
+                                    setMeal(updated.date === dayjs().format("YYYY-MM-DD") ? updated : meal);
+                                    setLastMeal(updated);
                                     setOpen(false);
                                 }}
                             />

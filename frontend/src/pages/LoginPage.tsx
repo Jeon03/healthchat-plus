@@ -1,9 +1,14 @@
-import {useCallback, useState} from "react";
-import {toast, ToastContainer} from "react-toastify";
+import { useCallback, useState } from "react";
+import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import api from "../api/axios";
-import {useAuth} from "../context/AuthContext";
-import {useNavigate} from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+
+import googleLogin from "../assets/icons/googleLogin.png";
+import naverLogin from "../assets/icons/naverLogin.png";
+import kakaoLogin from "../assets/icons/kakaoLogin.png";
+import logo from "../assets/logo.png";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -11,7 +16,7 @@ export default function LoginPage() {
     const { refreshUser } = useAuth();
     const navigate = useNavigate();
 
-    /** ✅ 로그인 */
+    /** 로그인 */
     const handleLogin = async () => {
         try {
             const res = await api.post("/auth/login", { email, password });
@@ -37,17 +42,47 @@ export default function LoginPage() {
         }
     };
 
-    /** ✅ 소셜 로그인 */
+    /** 소셜 로그인 이동 */
     const goOAuth = useCallback((provider: "google" | "naver" | "kakao") => {
         const backend = import.meta.env.VITE_API_URL || "http://localhost:8081";
         window.location.href = `${backend}/oauth2/authorization/${provider}`;
     }, []);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-950 transition-colors duration-300">
+        <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 -mt-20">
+
+            {/* 💡 히어로 섹션 */}
+            <div className="text-center mb-10">
+                <div className="flex justify-center mb-6">
+                    <img
+                        src={logo}
+                        alt="HealthChat+ Logo"
+                        className="
+      w-[220px] h-[70px]
+      object-cover
+      scale-[1.2]     /* 확대 */
+      mx-auto
+      overflow-hidden
+      select-none
+  "
+                    />
+                </div>
+
+                <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-xl mx-auto">
+                    여러분의 <span className="font-semibold text-blue-600 dark:text-blue-400">하루 식단 · 운동 · 감정</span>을
+                    자연어로 기록하면,<br/>
+                    <span className="font-semibold">AI 건강 코치가 분석·요약·피드백</span>까지 도와드려요.
+                </p>
+
+                <p className="mt-3 text-gray-500 dark:text-gray-400 text-sm">
+                    더 건강한 하루를 만들기 위한 가장 똑똑한 시작
+                </p>
+            </div>
+
+            {/* 로그인 카드 */}
             <div className="bg-white dark:bg-gray-800 p-10 rounded-2xl shadow-xl w-[400px] transition-colors duration-300">
                 <h2 className="text-2xl font-bold text-center text-blue-600 dark:text-blue-400 mb-6">
-                    🧠 HealthChat+ 로그인
+                    로그인
                 </h2>
 
                 {/* 이메일 입력 */}
@@ -83,7 +118,6 @@ export default function LoginPage() {
                     로그인
                 </button>
 
-                {/* 회원가입 이동 링크 */}
                 <p className="text-center text-gray-500 dark:text-gray-400 mt-4 text-sm">
                     계정이 없으신가요?{" "}
                     <button
@@ -96,32 +130,62 @@ export default function LoginPage() {
 
                 <hr className="my-5 border-gray-300 dark:border-gray-600" />
 
-                {/* ✅ 소셜 로그인 */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 mt-5">
+
+                    {/* Google */}
                     <button
                         onClick={() => goOAuth("google")}
-                        className="bg-[#DB4437] text-white py-2 rounded-lg hover:bg-[#c23321] transition"
+                        className="w-full"
                     >
-                        Google 계정으로 로그인
+                        <img
+                            src={googleLogin}
+                            alt="google-login"
+                            className="
+                w-full h-auto rounded-lg shadow-md cursor-pointer
+                hover:brightness-105 hover:shadow-lg active:scale-95
+                transition-all duration-200
+            "
+                        />
                     </button>
 
+                    {/* Naver */}
                     <button
                         onClick={() => goOAuth("naver")}
-                        className="bg-[#03C75A] text-white py-2 rounded-lg hover:bg-[#02b152] transition"
+                        className="w-full"
                     >
-                        Naver 계정으로 로그인
+                        <img
+                            src={naverLogin}
+                            alt="naver-login"
+                            className="
+                w-full h-auto rounded-lg shadow-md cursor-pointer
+                hover:brightness-105 hover:shadow-lg active:scale-95
+                transition-all duration-200
+            "
+                        />
                     </button>
 
+                    {/* Kakao */}
                     <button
                         onClick={() => goOAuth("kakao")}
-                        className="bg-[#FEE500] text-[#3C1E1E] py-2 rounded-lg hover:bg-[#fddb00] transition"
+                        className="w-full"
                     >
-                        Kakao 계정으로 로그인
+                        <img
+                            src={kakaoLogin}
+                            alt="kakao-login"
+                            className="
+                w-full h-auto rounded-lg shadow-md cursor-pointer
+                hover:brightness-105 hover:shadow-lg active:scale-95
+                transition-all duration-200
+            "
+                        />
                     </button>
+
                 </div>
+
+
             </div>
 
-            {/* Toast 메시지 */}
+            {/* Toast */}
             <ToastContainer
                 position="top-center"
                 autoClose={2500}

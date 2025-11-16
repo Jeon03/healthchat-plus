@@ -188,7 +188,7 @@ export default function GoalStepDetail({ goals, onBack, onClose, onSave, existin
                                 onClick={handleNext}
                                 className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                             >
-                                {index < goals.length - 1 ? "다음 →" : "완료 🎉"}
+                                {index < goals.length - 1 ? "다음 →" : "완료"}
                             </motion.button>
                         </motion.div>
                     </motion.div>
