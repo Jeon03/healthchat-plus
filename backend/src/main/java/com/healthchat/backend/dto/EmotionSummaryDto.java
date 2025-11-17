@@ -20,4 +20,17 @@ public class EmotionSummaryDto {
 
     private String rawText;
     private String date;
+
+    public static EmotionSummaryDto deleted() {
+        return EmotionSummaryDto.builder()
+                .primaryEmotion(null)
+                .primaryScore(0)
+                .emotions(List.of())
+                .scores(List.of())
+                .summaries(List.of())
+                .keywords(List.of())
+                .rawText(null)
+                .date(null)
+                .build();
+    }
 }

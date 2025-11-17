@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface AiCoachFeedbackRepository extends JpaRepository<AiCoachFeedback, Long> {
 
     Optional<AiCoachFeedback> findByUserIdAndDate(Long userId, LocalDate date);
+    void deleteByUserIdAndDate(Long userId, LocalDate date);
 }

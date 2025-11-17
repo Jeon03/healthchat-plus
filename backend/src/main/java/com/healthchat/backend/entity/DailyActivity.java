@@ -1,5 +1,6 @@
 package com.healthchat.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,7 @@ public class DailyActivity {
 
     // ✅ 사용자 연결
     @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnore
     private User user;
 
     // ✅ 날짜 (unique per user)

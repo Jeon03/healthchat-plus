@@ -9,4 +9,5 @@ import java.util.Optional;
 
 public interface DailyActivityRepository extends JpaRepository<DailyActivity, Long> {
     Optional<DailyActivity> findByUserAndDate(User user, LocalDate date);
+    void deleteByUserAndDate(User user, LocalDate date);
 }

@@ -35,7 +35,6 @@ public class AiCoachService {
      */
     public AiCoachFeedbackDto generateDailyFeedback(Long userId, LocalDate date) {
 
-        // 1) 유저 / 로그 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자 없음"));
 
@@ -44,33 +43,65 @@ public class AiCoachService {
 
         DailyEmotion emotion = dailyEmotionService.getEmotionByDate(user, date);
 
-        // 2) 자연어 기반 요약 쿼리 생성
         String analysisQuery = buildAnalysisQuery(user, dailyLog, emotion);
 
-        // 3) RAG 기반 문헌 청크 검색
         List<GuidelineSearchService.RetrievedChunk> chunks =
                 guidelineSearchService.searchRelevantChunks(analysisQuery);
 
-        // 4) Gemini에 전달할 프롬프트 생성
         String prompt = buildGeminiPrompt(user, dailyLog, emotion, chunks);
 
-        // 5) Gemini 호출
-        String json = geminiClient.generateJson("gemini-2.5-pro", prompt);
+        // 🔥 Gemini 호출
+        String response = geminiClient.generateSmartJson(prompt);
 
-        try {
-            // ⭐ JSON 블록 제거 및 순수 JSON만 추출
-            json = extractJson(json);
-
-            // JSON → DTO 변환
-            AiCoachFeedbackDto dto = objectMapper.readValue(json, AiCoachFeedbackDto.class);
-            log.info("✅ AiCoach 피드백 생성 완료: user={}, date={}", userId, date);
-            return dto;
-
-        } catch (Exception e) {
-            log.error("❌ AiCoach JSON 파싱 실패: {}", e.getMessage());
-            log.error("원문 응답: {}", json);
+        if (response == null || response.isBlank()) {
+            log.error("⚠️ Gemini 응답 null/공백 → fallback 실행");
             return fallbackFeedback(user, dailyLog, emotion);
         }
+
+        String json = extractJson(response);
+
+        if (json == null || json.isBlank() || !json.trim().startsWith("{")) {
+            log.error("⚠️ 추출된 JSON 형식 오류: {}", json);
+            return fallbackFeedback(user, dailyLog, emotion);
+        }
+
+        try {
+            return objectMapper.readValue(json, AiCoachFeedbackDto.class);
+        } catch (Exception e) {
+            log.error("❌ JSON 파싱 오류: {}", e.getMessage());
+            log.error("원문 JSON: {}", json);
+            return fallbackFeedback(user, dailyLog, emotion);
+        }
+    }
+
+
+    /**
+     * ⭐ 여러 목표 및 요인 전체 출력
+     */
+    private String buildGoalsSection(User user) {
+        List<User.GoalDetail> goals = user.getParsedGoals();
+
+        if (goals.isEmpty()) {
+            return "===== [사용자의 목표] =====\n등록된 목표 없음\n\n";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("===== [사용자의 목표] =====\n");
+
+        int idx = 1;
+        for (User.GoalDetail g : goals) {
+            sb.append(idx++).append(". 목표: ").append(g.getGoal()).append("\n");
+
+            if (g.getFactors() != null && !g.getFactors().isEmpty()) {
+                sb.append("   - 주요 요인:\n");
+                for (String f : g.getFactors()) {
+                    sb.append("     • ").append(f).append("\n");
+                }
+            }
+            sb.append("\n");
+        }
+
+        return sb.toString();
     }
 
 
@@ -80,34 +111,32 @@ public class AiCoachService {
      * ==========================================================
      */
     private String extractJson(String text) {
-        if (text == null) return null;
+        if (text == null || text.isBlank()) return null;
 
-        // ```json, ``` 제거
         text = text.replace("```json", "")
                 .replace("```", "")
                 .trim();
 
-        // JSON 범위만 추출
         int start = text.indexOf('{');
         int end = text.lastIndexOf('}');
 
-        if (start >= 0 && end > start) {
-            return text.substring(start, end + 1).trim();
+        if (start < 0 || end <= start) {
+            return null;
         }
 
-        return text; // 혹시 몰라 fallback
+        return text.substring(start, end + 1).trim();
     }
 
 
     /**
      * ==========================================================
-     * 유저 + 하루 데이터를 기반으로 Gemini에 넘길 요약 쿼리 생성
+     * buildAnalysisQuery — 간단 요약 (Gemini 검색용)
      * ==========================================================
      */
     private String buildAnalysisQuery(User user, DailyLog log, DailyEmotion emotion) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("사용자의 하루 건강 상태를 요약하고, 식단·운동·감정 관점에서 분석해줘.\n\n");
+        sb.append("사용자의 하루 건강 상태를 요약해줘.\n\n");
 
         sb.append("■ 사용자 프로필\n");
         sb.append("- 나이: ").append(user.getBirthDate()).append("\n");
@@ -115,17 +144,47 @@ public class AiCoachService {
         sb.append("- 키: ").append(user.getHeight()).append("\n");
         sb.append("- 몸무게: ").append(user.getWeight()).append("\n");
 
-        sb.append("- 목표: ").append(user.getGoalText()).append("\n\n");
+        // ⭐ 기존 goalText → 여러 목표 출력으로 변경
+        sb.append("- 목표:\n");
+        for (User.GoalDetail g : user.getParsedGoals()) {
+            sb.append("   • ").append(g.getGoal()).append("\n");
+        }
+        sb.append("\n");
+
+        // ⭐ 디버그 출력도 goalsDetail 기반으로 변경
+        System.out.println("========== 사용자 프로필 ==========");
+        System.out.println("성별       : " + user.getGender());
+        System.out.println("생년월일   : " + user.getBirthDate());
+        System.out.println("키         : " + user.getHeight());
+        System.out.println("몸무게     : " + user.getWeight());
+        System.out.println("목표       : ");
+        for (User.GoalDetail g : user.getParsedGoals()) {
+            System.out.println("  - " + g.getGoal());
+        }
+        System.out.println("===================================");
 
         sb.append("■ 오늘 요약\n");
-        sb.append("- 총 섭취 칼로리: ").append(log.getMeal() != null ? log.getMeal().getTotalCalories() : 0).append("\n");
-        sb.append("- 운동 소모 칼로리: ").append(log.getActivity() != null ? log.getActivity().getTotalCalories() : 0).append("\n");
+
+        if (log.getMeal() != null) {
+            sb.append("- 총 섭취 칼로리: ").append(log.getMeal().getTotalCalories()).append("\n");
+        } else {
+            sb.append("- 식단 기록 없음\n");
+        }
+
+        if (log.getActivity() != null) {
+            sb.append("- 운동 소모 칼로리: ").append(log.getActivity().getTotalCalories()).append("\n");
+        } else {
+            sb.append("- 운동 기록 없음\n");
+        }
+
         sb.append("- 순 에너지: ").append(log.getTotalCalories()).append("\n");
 
         if (emotion != null) {
             sb.append("■ 감정 요약\n");
             sb.append("- 대표 감정: ").append(emotion.getPrimaryEmotion()).append("\n");
             sb.append("- 감정 요약: ").append(emotion.getSummariesJson()).append("\n");
+        } else {
+            sb.append("■ 감정 기록 없음\n");
         }
 
         return sb.toString();
@@ -135,7 +194,7 @@ public class AiCoachService {
 
     /**
      * ==========================================================
-     * Gemini 프롬프트 생성
+     * Gemini 프롬프트 생성 — 여기 목표 섹션 포함됨 ⭐
      * ==========================================================
      */
     private String buildGeminiPrompt(
@@ -150,6 +209,7 @@ public class AiCoachService {
         sb.append("너는 '개인 맞춤형 AI 건강 코치'야.\n")
                 .append("사용자의 목표, 식단, 운동, 감정, 그리고 문헌 근거를 기반으로 코칭해야 해.\n\n");
 
+        // === 문헌 근거 ===
         sb.append("===== [문헌 근거] =====\n");
         if (chunks != null && !chunks.isEmpty()) {
             for (var c : chunks) {
@@ -160,6 +220,7 @@ public class AiCoachService {
             sb.append("(관련 문헌 없음)\n\n");
         }
 
+        // === 사용자 정보 ===
         sb.append("===== [사용자 정보] =====\n");
         sb.append("- 성별: ").append(user.getGender()).append("\n");
         sb.append("- 생년월일: ").append(user.getBirthDate()).append("\n");
@@ -170,21 +231,20 @@ public class AiCoachService {
         sb.append("- 알레르기: ").append(user.getAllergiesText()).append("\n");
         sb.append("- 복용약: ").append(user.getMedicationsText()).append("\n\n");
 
-        sb.append("===== [사용자 목표] =====\n");
-        if (user.getParsedGoals() != null && !user.getParsedGoals().isEmpty()) {
-            for (var g : user.getParsedGoals()) {
-                sb.append("- 목표: ").append(g.getGoal()).append("\n");
-                sb.append("  이유: ").append(String.join(", ", g.getFactors())).append("\n");
-            }
-        } else {
-            sb.append("(목표 정보 없음)\n");
-        }
-        sb.append("\n");
+        // ⭐ 여러 목표 + 요인 전부 포함
+        sb.append(buildGoalsSection(user)).append("\n");
+
+        // === 오늘 운동 null-safe ===
+        double exerciseCalories = dailyLog.getActivity() != null ? dailyLog.getActivity().getTotalCalories() : 0;
+        double exerciseTime = dailyLog.getActivity() != null ? dailyLog.getActivity().getTotalDuration() : 0;
+
+        // === 오늘 식단 null-safe ===
+        double mealCalories = dailyLog.getMeal() != null ? dailyLog.getMeal().getTotalCalories() : 0;
 
         sb.append("===== [오늘 기록 요약] =====\n");
-        sb.append("- 섭취 칼로리: ").append(dailyLog.getMeal() != null ? dailyLog.getMeal().getTotalCalories() : 0).append("\n");
-        sb.append("- 운동 칼로리: ").append(dailyLog.getActivity() != null ? dailyLog.getActivity().getTotalCalories() : 0).append("\n");
-        sb.append("- 운동 시간: ").append(dailyLog.getTotalExerciseTime()).append("\n");
+        sb.append("- 섭취 칼로리: ").append(mealCalories).append("\n");
+        sb.append("- 운동 칼로리: ").append(exerciseCalories).append("\n");
+        sb.append("- 운동 시간: ").append(exerciseTime).append("\n");
         sb.append("- 순 에너지: ").append(dailyLog.getTotalCalories()).append("\n");
 
         if (emotion != null) {
@@ -193,9 +253,9 @@ public class AiCoachService {
         }
         sb.append("\n");
 
+        // === JSON 출력 형식 ===
         sb.append("===== [출력 형식(JSON)] =====\n")
                 .append("설명 없이 아래 JSON만 출력해.\n\n")
-
                 .append("```json\n")
                 .append("{\n")
                 .append("  \"summary\": \"하루를 간단히 요약\",\n")
@@ -219,7 +279,7 @@ public class AiCoachService {
 
     /**
      * ==========================================================
-     * Gemini 실패 시 제공되는 fallback 기본 피드백
+     * Gemini 실패 시 fallback
      * ==========================================================
      */
     private AiCoachFeedbackDto fallbackFeedback(User user, DailyLog log, DailyEmotion emotion) {

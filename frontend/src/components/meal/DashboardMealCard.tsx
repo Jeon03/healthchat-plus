@@ -32,12 +32,12 @@ export default function DashboardMealCard({ onLoaded }: Props) {
         try {
             const res = await api.get<DailyMeal>("/ai/meals/today");
 
-            if (res.data && res.data.mealsJson) {
+            if (res.data && res.data.mealsJson && res.data.mealsJson !== "[]") {
                 setMeal(res.data);
-                onLoaded?.(true);   // 🔥 오늘 데이터 있음
+                onLoaded?.(true);
             } else {
                 setMeal(null);
-                onLoaded?.(false);  // 🔥 오늘 데이터 없음
+                onLoaded?.(false);
             }
         } catch {
             setMeal(null);
@@ -66,6 +66,7 @@ export default function DashboardMealCard({ onLoaded }: Props) {
 
     /** 최초 렌더 → 오늘 식단 확인 */
     useEffect(() => {
+        onLoaded?.(false);   // ✅ 로딩 시작 시 "오늘 기록 없음" 먼저 알림
         fetchMeal();
         findLastAvailableMeal();
     }, []);

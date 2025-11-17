@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import {AnimatePresence, motion} from "framer-motion";
 import { LuTriangleAlert } from "react-icons/lu";
 import DashboardMealCard from "../components/meal/DashboardMealCard";
 import DashboardActivityCard from "../components/exercise/DashboardActivityCard";
 import DashboardEmotionCard from "../components/emotion/DashboardEmotionCard";
-
+import AICoachPanel from "../components/AICoachPanel";
+import { toast } from "react-toastify";
 import maleIcon from "../assets/icons/male.svg";
 import femaleIcon from "../assets/icons/female.svg";
 import otherIcon from "../assets/icons/other.svg";
 import { useDashboard } from "../context/DashboardContext";
-import AICoachPanel from "../components/AICoachPanel";
 import {LuActivity, LuBedDouble, LuDna, LuRuler, LuSettings2, LuTarget, LuUser, LuWeight} from "react-icons/lu";
 import {
     LuClipboardList,
@@ -20,6 +20,10 @@ import {
     LuSmilePlus,
     LuBookOpen,
 } from "react-icons/lu";
+import dayjs from "dayjs";
+import DatePicker from "react-datepicker";
+
+
 interface Profile {
     nickname: string;
     gender?: string;
@@ -39,7 +43,58 @@ export default function Dashboard() {
     const [goalDetails, setGoalDetails] = useState<{ goal: string; factors: string[] }[]>([]);
     const [profileLoading, setProfileLoading] = useState(true);
     const [offsetBottom, setOffsetBottom] = useState(24);
+    const [selectedDate, setSelectedDate] = useState(dayjs().format("YYYY-MM-DD"));
 
+    const moveDate = async (offset: number) => {
+        const newDate = dayjs(selectedDate).add(offset, "day").format("YYYY-MM-DD");
+
+        try {
+            const res = await api.get(`/coach/${newDate}`);
+
+            // 🔥 해당 날짜 피드백 없음 → 이동 차단 + 메시지
+            if (!res.data) {
+                return;
+            }
+
+            // 🔥 피드백 존재 → 정상 이동
+            setSelectedDate(newDate);
+            setCoachFeedback(res.data);
+
+        } catch (err) {
+            toast.error("AI 코치 피드백을 불러오지 못했습니다.");
+        }
+    };
+
+
+    const fetchCoachFeedbackByDate = async (date: string) => {
+        console.log("🔥 fetchCoachFeedbackByDate 호출됨. date =", date);
+        setCoachLoading(true);
+
+        try {
+            const res = await api.get(`/coach/${date}`);
+
+            // 204 No Content 또는 빈 응답일 때
+            if (!res.data) {
+
+                setCoachFeedback(null);
+                return;
+            }
+
+            // 정상 데이터
+            setCoachFeedback(res.data);
+
+        } catch (err: any) {
+            console.log("❌ 에러:", err);
+
+            // 204 → axios는 catch로 안 빠지므로 res.data null 처리만 하면 됨
+            // 404, 500 등 에러 발생 시
+            toast.error("피드백 정보를 불러오지 못했습니다.");
+            setCoachFeedback(null);
+
+        } finally {
+            setCoachLoading(false);
+        }
+    };
     useEffect(() => {
         const handleScroll = () => {
             const footer = document.getElementById("app-footer");
@@ -64,7 +119,6 @@ export default function Dashboard() {
     const [hasTodayActivity, setHasTodayActivity] = useState(false);
     const [hasTodayEmotion, setHasTodayEmotion] = useState(false);
 
-    /** ✅ 오늘 중 하나라도 있으면 피드백 가능 */
     const canRequestFeedback = hasTodayMeal || hasTodayActivity || hasTodayEmotion;
 
     /** 🤖 AI 코치 상태 */
@@ -96,27 +150,6 @@ export default function Dashboard() {
         }
     };
 
-    /** 📌 피드백 가져오기 (DB에 있으면 가져오고, 없으면 생성) */
-    const fetchCoachFeedback = async () => {
-        // 오늘 기록이 하나도 없으면 바로 막기
-        if (!canRequestFeedback) {
-            setCoachError("오늘 식단·운동·감정 중 하나 이상 기록 후 피드백을 받을 수 있어요.");
-            return;
-        }
-
-        setCoachLoading(true);
-        setCoachError(null);
-
-        try {
-            const res = await api.get("/coach/daily");
-            setCoachFeedback(res.data);
-        } catch (e) {
-            setCoachError("피드백을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
-        } finally {
-            setCoachLoading(false);
-        }
-    };
-
     /** 📌 피드백 재생성 */
     const regenerateFeedback = async () => {
         if (!canRequestFeedback) return;
@@ -128,32 +161,36 @@ export default function Dashboard() {
             const res = await api.post("/coach/daily/generate");
             setCoachFeedback(res.data);
         } catch (e) {
-            setCoachError("재분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            setCoachError("분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         } finally {
             setCoachLoading(false);
         }
     };
 
-    /** 📌 첫 렌더링 */
     useEffect(() => {
         document.title = "HealthChat+ 대시보드";
+        // 1) 프로필 로드
         loadProfile();
+        // 2) 오늘 날짜 고정
+        const today = dayjs().format("YYYY-MM-DD");
+        setSelectedDate(today);
+        // 3) 오늘 날짜 피드백 자동 조회
+        fetchCoachFeedbackByDate(today);
+
     }, []);
 
-    /** 📌 AI 채팅 등으로 인한 갱신 */
     useEffect(() => {
         if (shouldRefresh) {
             loadProfile();
+
+            // ⭐ 전체 삭제 시 피드백까지 새로 조회
+            const today = dayjs().format("YYYY-MM-DD");
+            fetchCoachFeedbackByDate(today);
+
             setShouldRefresh(false);
         }
     }, [shouldRefresh]);
 
-
-    useEffect(() => {
-        if (canRequestFeedback && !coachFeedback && !coachLoading) {
-            fetchCoachFeedback();
-        }
-    }, [canRequestFeedback, coachFeedback, coachLoading]);
 
     if (profileLoading) {
         return (
@@ -180,7 +217,6 @@ export default function Dashboard() {
 
     const getProfileBgClass = () => {
         if (profile?.gender === "M") {
-            // 🔵 남성: 운동카드 Blue 테마
             return `
             bg-gradient-to-br from-blue-50/90 to-white/80
             dark:from-blue-900/40 dark:to-gray-900/70
@@ -189,7 +225,6 @@ export default function Dashboard() {
         `;
         }
         if (profile?.gender === "F") {
-            // 🌸 여성: 운동카드 스타일의 Pink 버전
             return `
             bg-gradient-to-br from-pink-50/90 to-white/80
             dark:from-pink-900/40 dark:to-gray-900/70
@@ -197,7 +232,6 @@ export default function Dashboard() {
             shadow-lg
         `;
         }
-        // 💜 기타
         return `
         bg-gradient-to-br from-purple-50/90 to-white/80
         dark:from-purple-900/40 dark:to-gray-900/70
@@ -450,13 +484,55 @@ export default function Dashboard() {
                     <h3 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center gap-2">
                         AI 건강 코치 피드백
                     </h3>
+                    {/* 🔥 날짜 선택 (이전 / 달력 / 다음) */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => moveDate(-1)}
+                            className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                        >
+                            ⬅︎ 전날
+                        </button>
+
+                        <DatePicker
+                            selected={dayjs(selectedDate).toDate()}
+                            onChange={async (date) => {
+                                const formatted = dayjs(date).format("YYYY-MM-DD");
+
+                                try {
+                                    const res = await api.get(`/coach/${formatted}`);
+
+                                    // 🔥 피드백 없음 → 이동 차단 + 토스트
+                                    if (!res.data) {
+                                        toast.info("해당 날짜의 피드백이 없습니다.");
+                                        return; // ❗ selectedDate 변경 안 함
+                                    }
+
+                                    // 🔥 피드백 존재 → 정상 이동
+                                    setSelectedDate(formatted);
+                                    setCoachFeedback(res.data);
+
+                                } catch (err) {
+                                    toast.error("피드백 정보를 불러올 수 없습니다.");
+                                }
+                            }}
+                            dateFormat="yyyy-MM-dd"
+                            className="px-3 py-1 rounded-md border dark:bg-gray-800 dark:border-gray-600
+                   text-sm w-[170px] h-[33px] text-center"
+                        />
+
+                        <button
+                            onClick={() => moveDate(1)}
+                            className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                        >
+                            다음날 ➡︎
+                        </button>
+                    </div>
 
                     <div className="flex items-center gap-3">
-
                         {/* ✅ 아직 피드백 생성 안됨 → "피드백 받기" 버튼만 */}
                         {!coachFeedback && (
                             <button
-                                onClick={fetchCoachFeedback}
+                                onClick={regenerateFeedback}
                                 disabled={coachLoading || !canRequestFeedback}
                                 className={`
         px-5 py-3 rounded-lg font-semibold shadow-md transition-all
@@ -491,6 +567,8 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+
+
                 {!canRequestFeedback && !coachFeedback && (
                     <p className="text-gray-600 dark:text-gray-400 mt-3 text-base leading-relaxed">
                         오늘의 <span className="font-semibold text-blue-600 dark:text-blue-400">식단 · 운동 · 감정</span> 중
@@ -508,15 +586,18 @@ export default function Dashboard() {
                 {coachError && (
                     <p className="mt-3 text-red-500 dark:text-red-400">{coachError}</p>
                 )}
-
+                <AnimatePresence mode="wait">
                 {coachFeedback && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
+                        key={selectedDate}  // ⭐ 날짜 바뀔 때 애니메이션 트리거
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12 }}
+                        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                         className="mt-8 space-y-6 p-6 rounded-xl
-            bg-gray-50/80 dark:bg-gray-800/50
-            border border-gray-300/30 dark:border-gray-700/40
-            shadow-inner"
+                bg-gray-50/80 dark:bg-gray-800/50
+                border border-gray-300/30 dark:border-gray-700/40
+                shadow-inner"
                     >
                         {/* 📌 하루 요약 */}
                         <div>
@@ -610,6 +691,7 @@ export default function Dashboard() {
                         )}
                     </motion.div>
                 )}
+                </AnimatePresence>
             </section>
 
             <button

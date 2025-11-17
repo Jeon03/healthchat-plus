@@ -31,7 +31,7 @@ export default function Footer() {
                     <span className="font-semibold text-blue-600 dark:text-blue-400">
                         HealthChat+
                     </span>{" "}
-                    | Designed & Built with ❤ for a Healthier Life
+                    | Designed & Built with AI for a Healthier Life
                 </p>
 
                 {/* 추가 링크 (원하면 클릭 가능하게 변경 가능) */}

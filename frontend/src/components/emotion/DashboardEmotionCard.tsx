@@ -68,6 +68,7 @@ export default function DashboardEmotionCard({ onLoaded }: Props) {
 
     /** 초기 로드 */
     useEffect(() => {
+        onLoaded?.(false);
         fetchTodayEmotion();
         findLastEmotion();
     }, []);

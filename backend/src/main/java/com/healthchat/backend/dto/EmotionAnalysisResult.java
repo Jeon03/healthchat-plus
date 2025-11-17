@@ -33,4 +33,18 @@ public class EmotionAnalysisResult {
 
     /** 원문 텍스트 */
     private String rawText;
+
+    /** 🔥 삭제 응답 */
+    public static EmotionAnalysisResult deleted() {
+        return EmotionAnalysisResult.builder()
+                .action("delete")
+                .emotions(List.of())
+                .scores(List.of())
+                .summaries(List.of())
+                .keywords(List.of())
+                .primaryEmotion(null)
+                .primaryScore(0)
+                .rawText(null)
+                .build();
+    }
 }

@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import static org.springframework.validation.method.MethodValidationResult.emptyResult;
+
 @Service
 @RequiredArgsConstructor
 public class GeminiEmotionAnalysisService {
@@ -23,23 +25,21 @@ public class GeminiEmotionAnalysisService {
 
         long start = System.currentTimeMillis();
 
+        // 빈 입력 → 바로 fallback
         if (text == null || text.isBlank()) {
-            return CompletableFuture.completedFuture(
-                    EmotionAnalysisResult.builder()
-                            .action("none")
-                            .emotions(List.of())
-                            .scores(List.of())
-                            .summaries(List.of())
-                            .keywords(List.of())
-                            .primaryEmotion("")
-                            .primaryScore(0)
-                            .rawText(text)
-                            .build()
-            );
+            return CompletableFuture.completedFuture(emptyResult(text));
         }
 
         String prompt = buildPrompt(text);
-        String response = geminiClient.generateJson("gemini-2.5-pro", prompt);
+
+        // 🔥 pro 금지 — flash 기본 + fallback 내장된 smartJson 사용
+        String response = geminiClient.generateSmartJson(prompt);
+
+        if (response == null || response.isBlank()) {
+            System.err.println("⚠ Emotion 분석 실패: 응답 null/blank");
+            return CompletableFuture.completedFuture(emptyResult(text));
+        }
+
         String json = extractJson(response);
 
         try {
@@ -50,7 +50,7 @@ public class GeminiEmotionAnalysisService {
             List<String> summaries = safeStringList(map.get("summaries"));
             List<List<String>> keywords = safeDoubleStringList(map.get("keywords"));
 
-            String primaryEmotion = map.getOrDefault("primaryEmotion", "").toString();
+            String primaryEmotion = (String) map.getOrDefault("primaryEmotion", "");
             int primaryScore = safeInt(map.get("primaryScore"));
 
             String action = detectAction(text, emotions);
@@ -68,28 +68,32 @@ public class GeminiEmotionAnalysisService {
 
             long took = System.currentTimeMillis() - start;
             System.out.printf(
-                    "✅ [Emotion] 감정 분석 완료 → %s | 대표:%s (%d점), 감정 %d개 — %dms%n",
+                    "✅ [Emotion] 분석 완료 → %s | 대표:%s (%d점), 감정 %d개 — %dms%n",
                     action, primaryEmotion, primaryScore, emotions.size(), took
             );
+
             return CompletableFuture.completedFuture(result);
 
         } catch (Exception e) {
             System.err.println("⚠ Emotion JSON parsing failed: " + e.getMessage());
             System.err.println("원본 응답: " + response);
-
-            EmotionAnalysisResult fallback = EmotionAnalysisResult.builder()
-                    .action("replace")
-                    .emotions(List.of())
-                    .scores(List.of())
-                    .summaries(List.of())
-                    .keywords(List.of())
-                    .primaryEmotion("")
-                    .primaryScore(0)
-                    .rawText(text)
-                    .build();
-
-            return CompletableFuture.completedFuture(fallback);
+            return CompletableFuture.completedFuture(emptyResult(text));
         }
+    }
+    /* ==========================================================
+       빈 결과 객체 생성 (fallback)
+     ========================================================== */
+    private EmotionAnalysisResult emptyResult(String text) {
+        return EmotionAnalysisResult.builder()
+                .action("replace")
+                .emotions(List.of())
+                .scores(List.of())
+                .summaries(List.of())
+                .keywords(List.of())
+                .primaryEmotion("")
+                .primaryScore(0)
+                .rawText(text)
+                .build();
     }
 
 
@@ -180,23 +184,19 @@ public class GeminiEmotionAnalysisService {
        action 자동 감지 (삭제/수정/추가)
      ========================================================================== */
     private String detectAction(String text, List<String> emotions) {
-
         String lower = text.toLowerCase();
 
-        // 삭제 요청 탐지
+        // 1) 삭제 명령
         if (lower.contains("지워") || lower.contains("삭제") || lower.contains("없애")) {
             return "delete";
         }
 
-        // 수정 요청 탐지
+        // 2) 수정 명령
         if (lower.contains("다시") || lower.contains("수정") || lower.contains("바꿔")) {
             return "update";
         }
 
-        // 감정 하나도 없으면 replace
-        if (emotions.isEmpty()) return "replace";
-
-        // 새 감정 입력 → replace(덮어쓰기)
-        return "replace";
+        // 3) 그 외 입력은 모두 추가(add)
+        return "add";
     }
 }

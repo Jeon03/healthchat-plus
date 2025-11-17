@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -30,8 +31,10 @@ public class AiAnalysisController {
     private final DailyEmotionService dailyEmotionService;
     private final DailyExerciseService dailyExerciseService;
     private final RecommendedActivityService recommendedActivityService;
-
+    private final GeminiRoutingService routingService;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final DailyLogService dailyLogService;
+    private final AiCoachFeedbackService aiCoachFeedbackService;
 
     private <T> T fromJson(String json, Class<T> type) {
         try {
@@ -140,13 +143,18 @@ public class AiAnalysisController {
         );
     }
 
-    /** ✅ 특정 날짜 운동 조회 */
+    /** 특정 날짜 운동 조회 */
     @GetMapping("/activity/{date}")
     public ResponseEntity<?> getActivityByDate(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable String date
     ) {
-        if (user == null) return ResponseEntity.status(401).body("로그인 필요");
+        if (user == null) {
+            Map<String, Object> body = new HashMap<>();
+            body.put("activity", null);
+            body.put("recommendedBurn", 0);
+            return ResponseEntity.status(401).body(body);
+        }
 
         LocalDate target = LocalDate.parse(date);
 
@@ -155,12 +163,16 @@ public class AiAnalysisController {
 
         DailyActivity activity = dailyExerciseService.getActivityByDate(foundUser, target);
 
-        if (activity == null) {
-            return ResponseEntity.ok("해당 날짜의 운동 데이터가 없습니다.");
-        }
+        double recommended = recommendedActivityService.calculateRecommendedBurn(foundUser);
 
-        return ResponseEntity.ok(activity);
+        Map<String, Object> result = new HashMap<>();
+        result.put("activity", activity);            // null 허용
+        result.put("recommendedBurn", recommended); // double → boxing but fine
+
+        return ResponseEntity.ok(result);
     }
+
+
 
     /** 오늘의 감정 조회 */
     @GetMapping("/emotion/today")
@@ -206,7 +218,7 @@ public class AiAnalysisController {
 
 
     @PostMapping("/analyze")
-    public ResponseEntity<UnifiedAnalysisResult> analyzeAll(
+    public ResponseEntity<?> analyzeAll(
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody Map<String, String> req
     ) {
@@ -214,10 +226,46 @@ public class AiAnalysisController {
             return ResponseEntity.status(401).build();
         }
 
+        // 🔥 User 단 1번 조회
+        User foundUser = userRepository.findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+
         String text = req.getOrDefault("text", "");
         System.out.println("📥 통합 입력 텍스트: " + text);
 
-        UnifiedAnalysisResult result = geminiUnifiedAnalysisService.analyzeAll(user.getId(), text);
+        // 🔥 라우팅도 딱 1번!
+        var routed = routingService.route(text);
+
+        boolean isDeleteAll =
+                "전체 기록 삭제".equals(routed.mealText()) &&
+                        "전체 기록 삭제".equals(routed.exerciseText()) &&
+                        "전체 기록 삭제".equals(routed.emotionText());
+
+        // 🔥 전체 삭제 처리
+        if (isDeleteAll) {
+
+            dailyLogService.deleteAll(foundUser, LocalDate.now());
+            dailyMealService.deleteToday(foundUser);
+            dailyExerciseService.deleteToday(foundUser);
+            dailyEmotionService.deleteToday(foundUser);
+            aiCoachFeedbackService.deleteTodayFeedback(foundUser.getId());
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "오늘의 전체 기록을 삭제했습니다.",
+                    "deleted", true
+            ));
+        }
+
+        // 🔥 라우팅 결과 + User 직접 전달하도록 변경
+        UnifiedAnalysisResult result =
+                geminiUnifiedAnalysisService.analyzeAll(
+                        foundUser,
+                        text,
+                        routed
+                );
+
         return ResponseEntity.ok(result);
     }
+
+
 }

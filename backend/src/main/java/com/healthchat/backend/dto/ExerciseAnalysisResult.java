@@ -26,4 +26,14 @@ public class ExerciseAnalysisResult {
 
     /** 오류 시 메시지 */
     private String message;
+
+    /** 🔥 삭제 응답 */
+    public static ExerciseAnalysisResult deleted() {
+        return ExerciseAnalysisResult.builder()
+                .action("delete")
+                .exercises(List.of())
+                .totalCalories(0)
+                .totalDuration(0)
+                .build();
+    }
 }

@@ -1,99 +1,168 @@
 package com.healthchat.backend.service;
 
 import com.healthchat.backend.dto.*;
-import com.healthchat.backend.entity.DailyActivity;
-import com.healthchat.backend.entity.DailyEmotion;
-import com.healthchat.backend.entity.DailyMeal;
-import com.healthchat.backend.entity.User;
+import com.healthchat.backend.entity.*;
 import com.healthchat.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
 public class GeminiUnifiedAnalysisService {
 
-    private final GeminiRoutingService routingService;
-
     private final GeminiMealAnalysisService mealService;
     private final GeminiExerciseAnalysisService exerciseService;
     private final GeminiEmotionAnalysisService emotionService;
-
+    private final AiCoachFeedbackService aiCoachFeedbackService;
     private final UserRepository userRepository;
     private final DailyMealService dailyMealService;
     private final DailyExerciseService dailyExerciseService;
     private final DailyEmotionService dailyEmotionService;
     private final DailyLogService dailyLogService;
 
-    public UnifiedAnalysisResult analyzeAll(Long userId, String userText) {
+    /**
+     * 컨트롤러에서 라우팅 결과를 전달받는 버전
+     */
+    public UnifiedAnalysisResult analyzeAll(
+            User user, String text, GeminiRoutingService.RoutingResult routed
+    ) {
 
-        // 1️⃣ 사용자 조회
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자 없음"));
+        /* =====================================================================
+           🔥 1) 먼저 삭제 명령을 처리한다 (AI 호출 안 함)
+           ===================================================================== */
 
-        // 2️⃣ 문장 라우팅
-        var routed = routingService.route(userText);
+        // -------------------------
+        // 전체 삭제
+        // -------------------------
+        if ("DELETE_ALL".equals(routed.mealText())
+                && "DELETE_ALL".equals(routed.exerciseText())
+                && "DELETE_ALL".equals(routed.emotionText())) {
 
-        // 3️⃣ 비동기로 각각 실행 (전부 @Async 메서드)
-        CompletableFuture<DailyAnalysis> mealFuture =
-                routed.mealText().isBlank()
-                        ? CompletableFuture.completedFuture(null)
-                        : mealService.analyzeDailyLog(routed.mealText());
+            dailyMealService.deleteToday(user);
+            dailyExerciseService.deleteToday(user);
+            dailyEmotionService.deleteToday(user);
+            dailyLogService.deleteAll(user);
+            aiCoachFeedbackService.deleteTodayFeedback(user.getId());
+            return UnifiedAnalysisResult.builder()
+                    .mealAnalysis(DailyAnalysis.deleted("meal"))
+                    .exerciseAnalysis(ExerciseAnalysisResult.deleted())
+                    .emotionAnalysis(EmotionSummaryDto.deleted())
+                    .build();
+        }
 
-        CompletableFuture<ExerciseAnalysisResult> exerciseFuture =
-                routed.exerciseText().isBlank()
-                        ? CompletableFuture.completedFuture(null)
-                        : exerciseService.analyzeExercise(userId, routed.exerciseText());
+        /* -------------------------
+           개별 삭제 (식단)
+           ------------------------- */
+        CompletableFuture<DailyAnalysis> mealFuture;
+        if ("DELETE_MEAL".equals(routed.mealText())) {
 
-        CompletableFuture<EmotionAnalysisResult> emotionFuture =
-                routed.emotionText().isBlank()
-                        ? CompletableFuture.completedFuture(null)
-                        : emotionService.analyzeEmotion(routed.emotionText());
+            dailyMealService.deleteToday(user);
 
-        // 4️⃣ 모두 완료될 때까지 기다림
+            mealFuture = CompletableFuture.completedFuture(
+                    DailyAnalysis.deleted("meal")
+            );
+
+        } else {
+            // AI 호출
+            mealFuture = routed.mealText().isBlank()
+                    ? CompletableFuture.completedFuture(DailyAnalysis.empty("meal"))
+                    : mealService.analyzeDailyLog(user, routed.mealText());
+        }
+
+
+        /* -------------------------
+           개별 삭제 (운동)
+           ------------------------- */
+        CompletableFuture<ExerciseAnalysisResult> exerciseFuture;
+
+        if ("DELETE_EXERCISE".equals(routed.exerciseText())) {
+
+            dailyExerciseService.deleteToday(user);
+
+            exerciseFuture = CompletableFuture.completedFuture(
+                    ExerciseAnalysisResult.deleted()
+            );
+
+        } else {
+
+            String exerciseText = routed.exerciseText();
+            List<ExerciseItem> todayExercises = dailyExerciseService.getTodayExercises(user);
+
+            if (exerciseText.isBlank()) {
+                exerciseFuture = CompletableFuture.completedFuture(null);
+            } else {
+                exerciseFuture = exerciseService.analyzeExercise(
+                        user.getId(),
+                        exerciseText,
+                        todayExercises
+                );
+            }
+        }
+
+        /* -------------------------
+           개별 삭제 (감정)
+           ------------------------- */
+        CompletableFuture<EmotionAnalysisResult> emotionFuture;
+
+        if ("DELETE_EMOTION".equals(routed.emotionText())) {
+
+            dailyEmotionService.deleteToday(user);
+
+            emotionFuture = CompletableFuture.completedFuture(
+                    EmotionAnalysisResult.deleted()
+            );
+
+        } else {
+            emotionFuture = routed.emotionText().isBlank()
+                    ? CompletableFuture.completedFuture(null)
+                    : emotionService.analyzeEmotion(routed.emotionText());
+        }
+
+
+        /* =====================================================================
+           🔥 2) AI Future들 모두 기다림
+           ===================================================================== */
         CompletableFuture.allOf(mealFuture, exerciseFuture, emotionFuture).join();
 
-        // 5️⃣ 결과 추출
         DailyAnalysis mealAnalysis = mealFuture.join();
         ExerciseAnalysisResult exerciseAnalysis = exerciseFuture.join();
         EmotionAnalysisResult emotionAnalysis = emotionFuture.join();
 
-        // 6️⃣ DB 저장
+
+        /* =====================================================================
+           🔥 3) DB 반영
+           ===================================================================== */
+
         DailyMeal savedMeal = null;
-        if (mealAnalysis != null) {
+        if (mealAnalysis != null && !"delete".equals(mealAnalysis.getAction())) {
             savedMeal = dailyMealService.saveDailyMeal(user, mealAnalysis);
+            dailyLogService.updateMeal(user, savedMeal);
         }
 
         DailyActivity savedActivity = null;
-        if (exerciseAnalysis != null) {
+        if (exerciseAnalysis != null && !"delete".equals(exerciseAnalysis.getAction())) {
             savedActivity = dailyExerciseService.saveOrUpdateDailyActivity(user, exerciseAnalysis);
-        }
-
-        DailyEmotion savedEmotion = null;
-        EmotionSummaryDto emotionSummaryDto = null;
-        if (emotionAnalysis != null) {
-            savedEmotion = dailyEmotionService.saveDailyEmotion(user, emotionAnalysis);
-            emotionSummaryDto = dailyEmotionService.toSummaryDto(savedEmotion);
-        }
-
-        // 7️⃣ DailyLog 업데이트
-        if (savedMeal != null) {
-            dailyLogService.updateMeal(user, savedMeal);
-        }
-        if (savedActivity != null) {
             dailyLogService.updateActivity(user, savedActivity);
         }
-        if (savedEmotion != null) {
+
+        EmotionSummaryDto savedEmotionDto = null;
+        if (emotionAnalysis != null && !"delete".equals(emotionAnalysis.getAction())) {
+            DailyEmotion savedEmotion = dailyEmotionService.saveDailyEmotion(user, emotionAnalysis);
             dailyLogService.updateEmotion(user, savedEmotion);
+            savedEmotionDto = dailyEmotionService.toSummaryDto(savedEmotion);
         }
 
-        // 8️⃣ 최종 통합 응답
+
+        /* =====================================================================
+           🔥 4) 최종 응답
+           ===================================================================== */
         return UnifiedAnalysisResult.builder()
                 .mealAnalysis(mealAnalysis)
                 .exerciseAnalysis(exerciseAnalysis)
-                .emotionAnalysis(emotionSummaryDto)
+                .emotionAnalysis(savedEmotionDto)
                 .build();
     }
 }

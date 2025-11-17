@@ -8,6 +8,7 @@ import com.healthchat.backend.repository.AiCoachFeedbackRepository;
 import com.healthchat.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -100,5 +101,15 @@ public class AiCoachFeedbackService {
         } catch (Exception ignored) {}
 
         return dto;
+    }
+    @Transactional
+    public void deleteTodayFeedback(Long userId) {
+        feedbackRepository.deleteByUserIdAndDate(userId, LocalDate.now());
+    }
+    /** 🔍 특정 날짜 피드백 조회 */
+    public AiCoachFeedbackDto getByDate(Long userId, LocalDate date) {
+        return feedbackRepository.findByUserIdAndDate(userId, date)
+                .map(this::toDto)
+                .orElse(null);
     }
 }

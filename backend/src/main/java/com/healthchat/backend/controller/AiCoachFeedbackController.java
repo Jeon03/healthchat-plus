@@ -1,10 +1,12 @@
 package com.healthchat.backend.controller;
 
 import com.healthchat.backend.dto.AiCoachFeedbackDto;
+import com.healthchat.backend.entity.AiCoachFeedback;
 import com.healthchat.backend.security.CustomUserDetails;
 import com.healthchat.backend.service.AiCoachFeedbackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -60,5 +62,20 @@ public class AiCoachFeedbackController {
                 user.getId(),
                 targetDate
         );
+    }
+    @GetMapping("/{date}")
+    public ResponseEntity<?> getFeedbackByDate(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable String date
+    ) {
+        LocalDate targetDate = LocalDate.parse(date);
+
+        AiCoachFeedbackDto dto = feedbackService.getByDate(user.getId(), targetDate);
+
+        if (dto == null) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(dto);
     }
 }

@@ -6,8 +6,10 @@ import com.healthchat.backend.dto.EmotionSummaryDto;
 import com.healthchat.backend.entity.DailyEmotion;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.DailyEmotionRepository;
+import com.healthchat.backend.repository.DailyMealRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +21,21 @@ public class DailyEmotionService {
 
     private final DailyEmotionRepository emotionRepository;
     private final ObjectMapper mapper = new ObjectMapper();
+    private final DailyLogService dailyLogService;
+
+    @Transactional
+    public void deleteToday(User user) {
+
+        LocalDate today = LocalDate.now();
+
+        // 1️⃣ DailyLog에서 감정 FK 먼저 제거
+        dailyLogService.clearEmotion(user, today);
+
+        // 2️⃣ 감정 테이블 삭제
+        emotionRepository.deleteByUserAndDate(user, today);
+
+        System.out.println("🗑 감정 기록 전체 삭제 완료");
+    }
 
     /* ==========================================================
      * 1) 조회
@@ -35,41 +52,113 @@ public class DailyEmotionService {
 
 
     /* ==========================================================
-     * 2) Gemini 기반 감정 저장 (다중 감정 구조)
+     * 2) Gemini 기반 감정 저장 (다중 감정 누적 저장)
      * ========================================================== */
+    @Transactional
     public DailyEmotion saveDailyEmotion(User user, EmotionAnalysisResult analysis) {
 
         LocalDate today = LocalDate.now();
 
-        // 기존 or 새 엔티티
+        // 오늘 감정 기록 조회
         DailyEmotion emotion = emotionRepository.findByUserAndDate(user, today)
                 .orElse(DailyEmotion.builder()
                         .user(user)
                         .date(today)
+                        .emotionsJson("[]")
+                        .scoresJson("[]")
+                        .summariesJson("[]")
+                        .keywordsJson("[]")
+                        .rawText("")
                         .createdAt(LocalDateTime.now())
-                        .build());
+                        .build()
+                );
 
         if (analysis == null || analysis.getEmotions() == null || analysis.getEmotions().isEmpty()) {
-            System.out.println("⚠️ 감정 분석 결과 없음 — 저장 안함");
             return emotion;
         }
 
-        // 대표 감정
-        emotion.setPrimaryEmotion(analysis.getPrimaryEmotion());
-        emotion.setPrimaryScore(analysis.getPrimaryScore());
+    /* ---------------------------------------------------
+       기존 JSON → 리스트 변환
+       --------------------------------------------------- */
+        List<String> prevEmotions = fromJsonList(emotion.getEmotionsJson());
+        List<Integer> prevScores = fromJsonIntList(emotion.getScoresJson());
+        List<String> prevSummaries = fromJsonList(emotion.getSummariesJson());
+        List<List<String>> prevKeywords = fromJson2DList(emotion.getKeywordsJson());
 
-        // JSON 필드 저장
-        emotion.setEmotionsJson(toJson(analysis.getEmotions()));
-        emotion.setScoresJson(toJson(analysis.getScores()));
-        emotion.setSummariesJson(toJson(analysis.getSummaries()));
-        emotion.setKeywordsJson(toJson(analysis.getKeywords()));
+    /* ---------------------------------------------------
+       신규 감정 append
+       --------------------------------------------------- */
+        List<String> newEmotions = analysis.getEmotions();
+        List<Integer> newScores = analysis.getScores();
+        List<String> newSummaries = analysis.getSummaries();
+        List<List<String>> newKeywords = analysis.getKeywords();
 
-        // 원문
-        emotion.setRawText(analysis.getRawText());
+        for (int i = 0; i < newEmotions.size(); i++) {
+            prevEmotions.add(newEmotions.get(i));
+            prevScores.add(newScores.get(i));
+            prevSummaries.add(newSummaries.get(i));
+            prevKeywords.add(newKeywords.get(i));
+        }
+
+    /* ---------------------------------------------------
+       대표 감정(primaryEmotion) 재계산
+       --------------------------------------------------- */
+        int maxIdx = 0;
+        for (int i = 1; i < prevScores.size(); i++) {
+            if (prevScores.get(i) > prevScores.get(maxIdx)) {
+                maxIdx = i;
+            }
+        }
+        emotion.setPrimaryEmotion(prevEmotions.get(maxIdx));
+        emotion.setPrimaryScore(prevScores.get(maxIdx));
+
+    /* ---------------------------------------------------
+       JSON 저장
+       --------------------------------------------------- */
+        emotion.setEmotionsJson(toJson(prevEmotions));
+        emotion.setScoresJson(toJson(prevScores));
+        emotion.setSummariesJson(toJson(prevSummaries));
+        emotion.setKeywordsJson(toJson(prevKeywords));
+
+        /* rawText 이어붙이기 */
+        String merged = (emotion.getRawText() == null ? "" : emotion.getRawText() + "\n")
+                + analysis.getRawText();
+        emotion.setRawText(merged);
         emotion.setCreatedAt(LocalDateTime.now());
 
         return emotionRepository.save(emotion);
     }
+
+
+    /* ==========================================================
+       JSON 파싱 유틸
+       ========================================================== */
+    private List<String> fromJsonList(String json) {
+        try {
+            return mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, String.class));
+        } catch (Exception e) {
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    private List<Integer> fromJsonIntList(String json) {
+        try {
+            return mapper.readValue(json, mapper.getTypeFactory().constructCollectionType(List.class, Integer.class));
+        } catch (Exception e) {
+            return new java.util.ArrayList<>();
+        }
+    }
+
+    private List<List<String>> fromJson2DList(String json) {
+        try {
+            return mapper.readValue(json,
+                    mapper.getTypeFactory().constructCollectionType(List.class,
+                            mapper.getTypeFactory().constructCollectionType(List.class, String.class)));
+        } catch (Exception e) {
+            return new java.util.ArrayList<>();
+        }
+    }
+
 
 
     /* ==========================================================

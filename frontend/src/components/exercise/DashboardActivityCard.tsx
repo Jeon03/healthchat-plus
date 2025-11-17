@@ -46,6 +46,10 @@ export default function DashboardActivityCard({ onLoaded }: Props) {
         try {
             const res = await api.get<ActivityResponse>("/ai/activity/today");
 
+            console.log("🔥 [운동 조회 응답]", res.data);              // 전체 응답
+            console.log("🔥 [오늘 Activity]", res.data.activity);      // DailyActivity
+            console.log("🔥 [Exercises]", res.data.activity?.exercises); // 운동 리스트
+
             if (res.data.activity) {
                 setActivity(res.data.activity);
                 onLoaded?.(true);    // 🔥 오늘 운동 있음
@@ -55,34 +59,67 @@ export default function DashboardActivityCard({ onLoaded }: Props) {
             }
 
             setRecommendedBurn(res.data.recommendedBurn || 0);
-        } catch {
+
+        } catch (e) {
+            console.error("❌ 운동 조회 오류:", e);
             setActivity(null);
             setRecommendedBurn(0);
-            onLoaded?.(false);       // 🔥 오류도 없는 것으로 처리
+            onLoaded?.(false);
         } finally {
             setLoading(false);
         }
     };
 
-    /** 최근 운동 기록 탐색 */
     const findLastActivity = async () => {
         let offset = 1;
-        while (offset < 30) {
+
+        while (offset <= 10) {   // 10일만 조회 (너무 많으면 비효율적)
             const target = dayjs().subtract(offset, "day").format("YYYY-MM-DD");
+
             try {
                 const res = await api.get(`/ai/activity/${target}`);
-                if (res.data && res.data.exercises) {
-                    setLastActivity(res.data);
-                    return;
+                console.log(`📅 [${target}] 조회`, res.data);
+
+                // 1️⃣ 문자열이면 → 운동 없음 → 즉시 중단
+                if (typeof res.data === "string") {
+                    console.log("문자열 응답 → 운동 없음 → 중단");
+                    break;
                 }
-            } catch {}
+
+                // 2️⃣ JSON이지만 activity 자체가 없음
+                if (!res.data.activity) {
+                    console.log("activity null → 운동 없음 → 중단");
+                    break;
+                }
+
+                const activity = res.data.activity;
+
+                // 3️⃣ exercises가 비었으면 기록 없음 → 중단
+                if (!activity.exercises || activity.exercises.length === 0) {
+                    console.log("exercises 없음 → 운동 데이터 없음 → 중단");
+                    break;
+                }
+
+                // 4️⃣ 진짜 운동 기록 발견 → 저장 후 종료
+                console.log("➡️ 최근 운동 발견", activity);
+                setLastActivity(activity);
+                return;
+
+            } catch (e) {
+                console.log(`❌ 조회 실패: ${target}`, e);
+                break;  // 예외 발생해도 종료 (무한 루프 방지)
+            }
+
             offset++;
         }
+
         setLastActivity(null);
     };
 
+
     // 최초 로드
     useEffect(() => {
+        onLoaded?.(false);
         fetchActivity();
         findLastActivity();
     }, []);
