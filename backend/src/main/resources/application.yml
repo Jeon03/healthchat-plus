@@ -3,16 +3,18 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/healthchat?serverTimezone=Asia/Seoul
+    url: jdbc:mysql://db:3306/healthchat?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
     password: 1234
+
   devtools:
     restart:
-      enabled: false
+      enabled: false  # 배포 환경에서는 비활성화 유지
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false   # 배포에서는 false 권장
 
   security:
     oauth2:
@@ -66,15 +68,10 @@ spring:
           auth: true
           starttls:
             enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
-          reuse: true
-        debug: false
 
   data:
     redis:
-      host: localhost
+      host: redis    # docker-compose 기준
       port: 6379
 
   task:
@@ -89,26 +86,14 @@ jwt:
   secret: ${JWT_SECRET}
 
 app:
-  frontend-url: "http://localhost:5173"
+  frontend-url: "http://52.78.215.10"   # React 실제 접근 URL
   jwt:
     access-exp-seconds: 1800
     refresh-exp-seconds: 1209600
   cookie:
-    domain: "localhost"
-    secure: false
+    domain: "52.78.215.10"     # 배포환경: IP 또는 도메인
+    secure: false              # http 환경
     same-site: Lax
-
-#gemini:
-#  api:
-#    key: ${GEMINI_API_KEY}             # .env 또는 환경변수에 저장된 Google AI Studio API 키
-#    base-url: https://generativelanguage.googleapis.com/v1beta/models
-#  model:
-#    default: gemini-2.5-flash
-#    flash: gemini-2.5-flash
-#    pro: gemini-2.5-pro             # 빠른 응답용 (선택)
-#  timeout:
-#    connect: 5000
-#    read: 10000
 
 gemini:
   api:
@@ -118,8 +103,6 @@ gemini:
     flash: gemini-2.5-flash
     pro: gemini-2.5-pro
     embed: gemini-embedding-001
-
   timeout:
     connect: 5000
     read: 10000
-

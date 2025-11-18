@@ -42,12 +42,12 @@ services:
   # Backend (Spring Boot)
   # =============================
   backend:
-    build: ./healthchat-backend
+    build: ./backend
     container_name: healthchat-backend
     expose:
       - "8081"
     env_file:
-      - ./healthchat-backend/.env
+      - ./backend/.env
     depends_on:
       db:
         condition: service_healthy
@@ -61,7 +61,7 @@ services:
   # Frontend (React + Nginx)
   # =============================
   frontend:
-    build: ./healthchat-frontend
+    build: ./frontend
     container_name: healthchat-frontend
     ports:
       - "80:80"
@@ -71,10 +71,16 @@ services:
     networks:
       - healthchat-net
 
+# =============================
+# Volumes
+# =============================
 volumes:
   db_data:
   redis_data:
 
+# =============================
+# Network
+# =============================
 networks:
   healthchat-net:
     driver: bridge
