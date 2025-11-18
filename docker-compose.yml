@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  # =============================
+  # MySQL
+  # =============================
+  db:
+    image: mysql:8.0.36
+    container_name: healthchat-mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=1234
+      - MYSQL_DATABASE=healthchat
+      - TZ=Asia/Seoul
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - healthchat-net
+
+  # =============================
+  # Redis
+  # =============================
+  redis:
+    image: redis:7.2
+    container_name: healthchat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - healthchat-net
+
+  # =============================
+  # Backend (Spring Boot)
+  # =============================
+  backend:
+    build: ./healthchat-backend
+    container_name: healthchat-backend
+    expose:
+      - "8081"
+    env_file:
+      - ./healthchat-backend/.env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - healthchat-net
+
+  # =============================
+  # Frontend (React + Nginx)
+  # =============================
+  frontend:
+    build: ./healthchat-frontend
+    container_name: healthchat-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - healthchat-net
+
+volumes:
+  db_data:
+  redis_data:
+
+networks:
+  healthchat-net:
+    driver: bridge
