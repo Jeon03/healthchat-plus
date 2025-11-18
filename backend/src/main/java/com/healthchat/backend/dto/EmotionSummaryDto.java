@@ -10,6 +10,8 @@ import java.util.List;
 @Builder
 public class EmotionSummaryDto {
 
+    private String action;
+
     private String primaryEmotion;
     private int primaryScore;
 
@@ -17,12 +19,12 @@ public class EmotionSummaryDto {
     private List<Integer> scores;
     private List<String> summaries;
     private List<List<String>> keywords;
-
     private String rawText;
     private String date;
 
     public static EmotionSummaryDto deleted() {
         return EmotionSummaryDto.builder()
+                .action("delete")
                 .primaryEmotion(null)
                 .primaryScore(0)
                 .emotions(List.of())
@@ -34,3 +36,4 @@ public class EmotionSummaryDto {
                 .build();
     }
 }
+

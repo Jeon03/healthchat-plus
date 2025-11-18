@@ -22,6 +22,7 @@ import {
 } from "react-icons/lu";
 import dayjs from "dayjs";
 import DatePicker from "react-datepicker";
+import {FiMessageSquare} from "react-icons/fi";
 
 
 interface Profile {
@@ -67,7 +68,6 @@ export default function Dashboard() {
 
 
     const fetchCoachFeedbackByDate = async (date: string) => {
-        console.log("🔥 fetchCoachFeedbackByDate 호출됨. date =", date);
         setCoachLoading(true);
 
         try {
@@ -476,7 +476,7 @@ export default function Dashboard() {
         shadow-[0_8px_20px_rgba(0,0,0,0.12)]
         transition-all duration-500
 
-        hover:scale-[1.02]
+
         hover:shadow-[0_12px_28px_rgba(59,130,246,0.25),0_0_30px_rgba(147,197,253,0.3)]
     "
             >
@@ -698,14 +698,16 @@ export default function Dashboard() {
                 onClick={() => setOpenCoach(true)}
                 style={{ bottom: `${offsetBottom}px` }}
                 className="
-                    fixed right-6 z-50
-                    px-6 py-3 rounded-xl
-                    bg-blue-600 text-white font-semibold
-                    shadow-xl hover:bg-blue-700 active:scale-95
-                    transition-all duration-300
-                "
+        fixed right-6 z-50
+        px-6 py-3 rounded-xl
+        bg-blue-600 text-white font-semibold
+        shadow-xl hover:bg-blue-700 active:scale-95
+        transition-all duration-300
+        flex items-center gap-2
+    "
             >
-                🤖 AI 건강 코치
+                <FiMessageSquare className="w-5 h-5" />
+                기록하기
             </button>
 
             <AICoachPanel open={openCoach} onClose={() => setOpenCoach(false)} />

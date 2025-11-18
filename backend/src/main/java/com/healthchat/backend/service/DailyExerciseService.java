@@ -7,6 +7,7 @@ import com.healthchat.backend.entity.ExerciseItem;
 import com.healthchat.backend.entity.User;
 import com.healthchat.backend.repository.DailyActivityRepository;
 import com.healthchat.backend.repository.DailyEmotionRepository;
+import com.healthchat.backend.repository.ExerciseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,9 +19,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DailyExerciseService {
 
-    private final DailyEmotionRepository emotionRepository;
     private final DailyActivityRepository dailyActivityRepository;
+    private final ExerciseRepository exerciseRepository;
     private final DailyLogService dailyLogService;
+
     public DailyActivity getTodayActivity(User user) {
         return dailyActivityRepository.findByUserAndDate(user, LocalDate.now())
                 .orElse(null);
@@ -36,13 +38,13 @@ public class DailyExerciseService {
 
         LocalDate today = LocalDate.now();
 
-        // 1️⃣ 감정 테이블 삭제
-        emotionRepository.deleteByUserAndDate(user, today);
+        // 1️⃣ 운동 테이블 삭제
+        exerciseRepository.deleteByUserAndDate(user, today);
 
-        // 2️⃣ DailyLog에서도 감정 정보 제거
-        dailyLogService.clearEmotion(user, today);
+        // 2️⃣ DailyLog에서도 운동 정보 제거
+        dailyLogService.clearActivity(user, today);
 
-        System.out.println("🗑 감정 기록 전체 삭제 완료");
+        System.out.println("🗑 운동 기록 전체 삭제 완료");
     }
 
     @Transactional
@@ -167,34 +169,54 @@ public class DailyExerciseService {
         });
     }
 
-
+    private String normalize(String text) {
+        if (text == null) return "";
+        return java.text.Normalizer.normalize(text.trim(), java.text.Normalizer.Form.NFC);
+    }
     /**
-     * 🟥 delete — 전체 삭제 시 true 반환
+     * 🟥 delete — deleteTargets 기반 삭제
      */
     private boolean deleteExercises(DailyActivity activity, ExerciseAnalysisResult analysis) {
 
-        // ❗ 아무 운동 이름도 안 들어오면 → 전체 삭제
-        if (analysis.getExercises() == null || analysis.getExercises().isEmpty()) {
+        List<String> targets = analysis.getDeleteTargets();
+
+        // 전체 삭제
+        if ((targets == null || targets.isEmpty())
+                && (analysis.getExercises() == null || analysis.getExercises().isEmpty())) {
+
+            activity.getExercises().clear();
             return true;
         }
 
-        // 특정 운동만 삭제
-        List<String> names = analysis.getExercises().stream()
-                .map(ExerciseItemDto::getName)
-                .toList();
+        // 특정 삭제
+        if (targets != null && !targets.isEmpty()) {
 
-        activity.getExercises().removeIf(e -> names.contains(e.getName()));
+            activity.getExercises().removeIf(e ->
+                    targets.stream().anyMatch(t ->
+                            normalize(t).equalsIgnoreCase(normalize(e.getName()))
+                    )
+            );
+
+            return false;
+        }
 
         return false;
     }
 
 
-    /**
-     * 🔵 replace — 전체 교체
-     */
+
     private void replaceExercises(DailyActivity activity, ExerciseAnalysisResult analysis) {
-        activity.getExercises().clear();
+
+        if (analysis.getDeleteTargets() != null) {
+            activity.getExercises().removeIf(e ->
+                    analysis.getDeleteTargets().stream().anyMatch(t ->
+                            normalize(t).equalsIgnoreCase(normalize(e.getName()))
+                    )
+            );
+        }
+
         addOrMerge(activity, analysis);
+        updateTotals(activity);
     }
 
 

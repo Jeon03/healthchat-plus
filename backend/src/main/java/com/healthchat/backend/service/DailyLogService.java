@@ -42,10 +42,23 @@ public class DailyLogService {
     // ========================================================================
     @Transactional
     public void clearMeal(User user, LocalDate date) {
+
         dailyLogRepository.findByUserIdAndDate(user.getId(), date)
                 .ifPresent(log -> {
-                    log.setMeal(null);          // FK 제거
-                    recalcSummary(log);         // 총칼로리 재계산
+
+                    DailyMeal meal = log.getMeal();
+
+                    // 1️⃣ DailyMeal 엔티티 자체 삭제
+                    if (meal != null) {
+                        dailyMealRepository.delete(meal);
+                    }
+
+                    // 2️⃣ DailyLog의 meal FK 제거
+                    log.setMeal(null);
+
+                    // 3️⃣ 식단 요약 재계산 (총칼로리 0 등)
+                    recalcSummary(log);
+
                     dailyLogRepository.save(log);
                 });
     }
@@ -56,10 +69,23 @@ public class DailyLogService {
     // ========================================================================
     @Transactional
     public void clearActivity(User user, LocalDate date) {
+
         dailyLogRepository.findByUserIdAndDate(user.getId(), date)
                 .ifPresent(log -> {
-                    log.setActivity(null);      // FK 제거
+
+                    DailyActivity activity = log.getActivity();
+
+                    // 1️⃣ DailyActivity 자체 삭제
+                    if (activity != null) {
+                        dailyActivityRepository.delete(activity);
+                    }
+
+                    // 2️⃣ DailyLog의 FK 제거
+                    log.setActivity(null);
+
+                    // 3️⃣ 요약 데이터 초기화 (운동 0 처리)
                     recalcSummary(log);
+
                     dailyLogRepository.save(log);
                 });
     }

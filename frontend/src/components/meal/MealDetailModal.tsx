@@ -7,6 +7,15 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import NutritionDonut from "../charts/NutritionDonut";
 
+// 🥗 식단 아이콘 & 영양 아이콘
+import {
+    Salad,
+    UtensilsCrossed,
+    Drumstick,
+    Droplet,
+    Wheat,
+} from "lucide-react";
+
 export interface FoodItem {
     name: string;
     quantity: number;
@@ -37,7 +46,7 @@ interface MealDetailModalProps {
     onUpdated: (updated: DailyMeal) => void;
 }
 
-/** ✅ 식단 점수 계산 (WHO 기준 단4:지3:탄6 비율) */
+/** WHO 단:지:탄 비율 기반 점수 계산 */
 function calculateNutritionScore(protein: number, fat: number, carbs: number): number {
     const total = protein + fat + carbs;
     if (total === 0) return 0;
@@ -49,17 +58,15 @@ function calculateNutritionScore(protein: number, fat: number, carbs: number): n
     const ideal = { p: 4 / 13, f: 3 / 13, c: 6 / 13 };
     const deviation = Math.pow(p - ideal.p, 2) + Math.pow(f - ideal.f, 2) + Math.pow(c - ideal.c, 2);
 
-    // ✅ 스케일 조정 (5000 → 500)
-    const score = Math.max(0, 100 - deviation * 500);
-    return Math.round(score);
+    return Math.max(0, Math.round(100 - deviation * 500));
 }
 
-/** ✅ 합계 계산 유틸 */
 function accumulate(meals: Meal[]) {
     let totalCalories = 0;
     let totalProtein = 0;
     let totalFat = 0;
     let totalCarbs = 0;
+
     for (const m of meals) {
         for (const f of m.foods) {
             totalCalories += f.calories || 0;
@@ -76,9 +83,8 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
     const [saving, setSaving] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date(meal.date));
     const [nutritionScore, setNutritionScore] = useState(0);
-    const [slideDir, setSlideDir] = useState(0); // ✅ 슬라이드 방향 (-1 전날 / +1 다음날)
+    const [slideDir, setSlideDir] = useState(0);
 
-    /** ✅ 초기 로드 */
     useEffect(() => {
         try {
             const parsed = JSON.parse(meal.mealsJson || "[]");
@@ -89,7 +95,6 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
         }
     }, [meal]);
 
-    /** ✅ parsedMeals 변경 시 식단 점수 재계산 */
     useEffect(() => {
         if (parsedMeals.length === 0) {
             setNutritionScore(0);
@@ -99,7 +104,6 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
         setNutritionScore(calculateNutritionScore(totals.totalProtein, totals.totalFat, totals.totalCarbs));
     }, [parsedMeals]);
 
-    /** ✅ 날짜 이동 */
     const fetchMealByDate = async (targetDate: string) => {
         try {
             const res = await api.get(`/ai/meals/${targetDate}`);
@@ -128,7 +132,6 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
         await fetchMealByDate(formatted);
     };
 
-    /** ✅ 필드 변경 처리 */
     const setField = (mealTime: string, foodIndex: number, field: keyof FoodItem, value: string) => {
         setParsedMeals((prev) =>
             prev.map((m) =>
@@ -152,7 +155,6 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
         );
     };
 
-    /** ✅ 저장 요청 */
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -164,7 +166,7 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
             };
             const res = await api.post<DailyMeal>("/ai/meals/save", body);
             onUpdated(res.data);
-            toast.success("✅ 식단이 저장되었습니다.");
+            toast.success("🍽️ 식단이 저장되었습니다!");
         } catch (e) {
             console.error("❌ 식단 저장 실패:", e);
             toast.error("식단 저장 중 오류가 발생했습니다.");
@@ -178,147 +180,209 @@ export default function MealDetailModal({ meal, onClose, onUpdated }: MealDetail
     const totals = accumulate(sortedMeals);
 
     return (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-auto p-8 border border-gray-200 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl mx-auto p-8 border border-gray-200 dark:border-gray-700">
 
-                {/* ✅ 상단 헤더 */}
-                <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => moveToDate(-1)}
-                            className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-                        >
-                            ⬅︎ 전날
-                        </button>
-
-                        <DatePicker
-                            selected={currentDate}
-                            onChange={handleDateChange}
-                            dateFormat="yyyy-MM-dd"
-                            className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-center font-semibold text-green-500 w-36"
-                        />
-
-                        <button
-                            onClick={() => moveToDate(1)}
-                            className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-                        >
-                            다음날 ➡︎
-                        </button>
-                    </div>
-
-                    {/* ✅ 식단 점수 + 영양 비율 */}
-                    <div
-                        className={`px-4 py-2 rounded-xl text-center ${
-                            nutritionScore >= 80
-                                ? "bg-green-100 text-green-700 dark:bg-green-800/30"
-                                : nutritionScore >= 60
-                                    ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30"
-                                    : "bg-red-100 text-red-700 dark:bg-red-800/30"
-                        }`}
+            {/* === 상단 헤더 === */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => moveToDate(-1)}
+                        className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
                     >
-                        <div className="font-semibold text-sm">
-                            🥗 식단 점수: {nutritionScore} / 100
-                        </div>
-                        {totals.totalProtein + totals.totalFat + totals.totalCarbs > 0 && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                단{" "}
-                                {((totals.totalProtein / (totals.totalProtein + totals.totalFat + totals.totalCarbs)) * 100).toFixed(1)}%
-                                · 지{" "}
-                                {((totals.totalFat / (totals.totalProtein + totals.totalFat + totals.totalCarbs)) * 100).toFixed(1)}%
-                                · 탄{" "}
-                                {((totals.totalCarbs / (totals.totalProtein + totals.totalFat + totals.totalCarbs)) * 100).toFixed(1)}%
-                            </div>
-                        )}
-                    </div>
+                        ⬅︎ 전날
+                    </button>
+
+                    <DatePicker
+                        selected={currentDate}
+                        onChange={handleDateChange}
+                        dateFormat="yyyy-MM-dd"
+                        className="px-3 py-1 rounded-md bg-gray-100 dark:bg-gray-800 text-center font-semibold text-green-500 w-36"
+                    />
+
+                    <button
+                        onClick={() => moveToDate(1)}
+                        className="px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
+                    >
+                        다음날 ➡︎
+                    </button>
                 </div>
 
-                {/* ✅ 애니메이션으로 감싼 본문 */}
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={currentDate.toISOString()}
-                        initial={{ opacity: 0, x: slideDir > 0 ? 100 : -100 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: slideDir > 0 ? -100 : 100 }}
-                        transition={{ duration: 0.35, ease: "easeInOut" }}
-                    >
-                        <div className="mt-8 flex justify-center mb-10">
-                            <NutritionDonut
-                                protein={totals.totalProtein}
-                                fat={totals.totalFat}
-                                carbs={totals.totalCarbs}
-                                size={240}
-                            />
+                {/* === 식단 점수 === */}
+                <div
+                    className={`px-4 py-2 rounded-xl text-center flex flex-col items-center gap-1 ${
+                        nutritionScore >= 80
+                            ? "bg-green-100 text-green-700 dark:bg-green-800/30 dark:text-green-300"
+                            : nutritionScore >= 60
+                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-800/30 dark:text-yellow-300"
+                                : "bg-red-100 text-red-700 dark:bg-red-800/30 dark:text-red-300"
+                    }`}
+                >
+                    <div className="font-semibold text-sm flex items-center gap-1">
+                        <Salad className="w-4 h-4" />
+                        식단 점수: {nutritionScore} / 100
+                    </div>
+
+                    {totals.totalProtein + totals.totalFat + totals.totalCarbs > 0 && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                            단 {(totals.totalProtein / (totals.totalProtein + totals.totalFat + totals.totalCarbs) * 100).toFixed(1)}%
+                            · 지 {(totals.totalFat / (totals.totalProtein + totals.totalFat + totals.totalCarbs) * 100).toFixed(1)}%
+                            · 탄 {(totals.totalCarbs / (totals.totalProtein + totals.totalFat + totals.totalCarbs) * 100).toFixed(1)}%
                         </div>
-                        {/* ✅ 식단 테이블 */}
-                        <div className="overflow-y-auto px-2" style={{ maxHeight: "calc(100vh - 260px)" }}>
-                            <div className="flex justify-center">
-                                <div className="w-full max-w-[720px] space-y-6">
-                                    {sortedMeals.map((m) => {
-                                        const subtotals = accumulate([m]);
-                                        return (
-                                            <div key={m.time} className="pb-4 border-b border-gray-200/40 dark:border-gray-700/40">
-                                                <h3 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200">{m.time}</h3>
-                                                {m.foods.map((f, i) => (
-                                                    <div key={i} className="grid grid-cols-[150px,80px,80px,80px,80px,80px] gap-2 mb-2">
-                                                        <input className="border rounded px-2 py-1 text-sm" value={f.name}
-                                                               onChange={(e) => setField(m.time, i, "name", e.target.value)} />
-                                                        <input className="border rounded px-2 py-1 text-right text-sm" value={String(f.quantity)}
-                                                               onChange={(e) => setField(m.time, i, "quantity", e.target.value)} />
-                                                        <input className="border rounded px-2 py-1 text-right text-sm" value={String(f.calories)}
-                                                               onChange={(e) => setField(m.time, i, "calories", e.target.value)} />
-                                                        <input className="border rounded px-2 py-1 text-right text-sm" value={String(f.protein)}
-                                                               onChange={(e) => setField(m.time, i, "protein", e.target.value)} />
-                                                        <input className="border rounded px-2 py-1 text-right text-sm" value={String(f.fat)}
-                                                               onChange={(e) => setField(m.time, i, "fat", e.target.value)} />
-                                                        <input className="border rounded px-2 py-1 text-right text-sm" value={String(f.carbs)}
-                                                               onChange={(e) => setField(m.time, i, "carbs", e.target.value)} />
-                                                    </div>
-                                                ))}
-                                                <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                                    단백질 {subtotals.totalProtein.toFixed(1)}g · 지방{" "}
-                                                    {subtotals.totalFat.toFixed(1)}g · 탄수화물{" "}
-                                                    {subtotals.totalCarbs.toFixed(1)}g
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ✅ 전체 합계 + 도넛차트 */}
-                        <div className="mt-6 flex justify-center">
-                            <div className="w-full max-w-[720px] pt-3 text-center text-sm text-gray-700 dark:text-gray-300">
-                                <span className="font-semibold text-red-500 dark:text-red-400">🍱 전체 합계:</span>{" "}
-                                총 <span className="font-semibold text-gray-900 dark:text-white">{totals.totalCalories.toFixed(0)} kcal</span>{" "}
-                                · 단백질{" "}
-                                <span className="font-semibold text-blue-500 dark:text-blue-400">{totals.totalProtein.toFixed(1)} g</span>{" "}
-                                · 지방{" "}
-                                <span className="font-semibold text-yellow-500 dark:text-yellow-400">{totals.totalFat.toFixed(1)} g</span>{" "}
-                                · 탄수화물{" "}
-                                <span className="font-semibold text-green-500 dark:text-green-400">{totals.totalCarbs.toFixed(1)} g</span>
-
-
-                            </div>
-                        </div>
-                    </motion.div>
-                </AnimatePresence>
-
-                {/* ✅ 버튼 */}
-                <div className="mt-6 flex justify-end gap-3 max-w-[720px] mx-auto">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600"
-                    >
-                        닫기
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg"
-                    >
-                        {saving ? "저장 중..." : "저장하기"}
-                    </button>
+                    )}
                 </div>
             </div>
+
+            {/* === 본문 애니메이션 === */}
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentDate.toISOString()}
+                    initial={{ opacity: 0, x: slideDir > 0 ? 100 : -100 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: slideDir > 0 ? -100 : 100 }}
+                    transition={{ duration: 0.35, ease: "easeInOut" }}
+                >
+
+                    <div className="mt-8 flex justify-center mb-10">
+                        <NutritionDonut
+                            protein={totals.totalProtein}
+                            fat={totals.totalFat}
+                            carbs={totals.totalCarbs}
+                            size={240}
+                        />
+                    </div>
+
+                    {/* === 식단 입력 테이블 === */}
+                    <div className="overflow-y-auto px-2" style={{ maxHeight: "calc(100vh - 260px)" }}>
+                        <div className="flex justify-center">
+                            <div className="w-full max-w-[720px] space-y-6">
+
+                                {sortedMeals.map((m) => {
+                                    const subtotals = accumulate([m]);
+                                    return (
+                                        <div key={m.time} className="pb-4 border-b border-gray-200/40 dark:border-gray-700/40">
+
+                                            <h3 className="font-semibold text-lg mb-3 text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                                                <UtensilsCrossed className="w-4 h-4 text-gray-500 dark:text-gray-300" />
+                                                {m.time}
+                                            </h3>
+
+                                            {m.foods.map((f, i) => (
+                                                <div key={i} className="grid grid-cols-[150px,80px,80px,80px,80px,80px] gap-2 mb-2">
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-sm"
+                                                        value={f.name}
+                                                        onChange={(e) => setField(m.time, i, "name", e.target.value)}
+                                                    />
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-right text-sm"
+                                                        value={String(f.quantity)}
+                                                        onChange={(e) => setField(m.time, i, "quantity", e.target.value)}
+                                                    />
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-right text-sm"
+                                                        value={String(f.calories)}
+                                                        onChange={(e) => setField(m.time, i, "calories", e.target.value)}
+                                                    />
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-right text-sm"
+                                                        value={String(f.protein)}
+                                                        onChange={(e) => setField(m.time, i, "protein", e.target.value)}
+                                                    />
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-right text-sm"
+                                                        value={String(f.fat)}
+                                                        onChange={(e) => setField(m.time, i, "fat", e.target.value)}
+                                                    />
+
+                                                    <input
+                                                        className="border rounded px-2 py-1 text-right text-sm"
+                                                        value={String(f.carbs)}
+                                                        onChange={(e) => setField(m.time, i, "carbs", e.target.value)}
+                                                    />
+                                                </div>
+                                            ))}
+
+                                            <div className="mt-1 text-sm flex items-center gap-3 text-gray-600 dark:text-gray-400">
+
+                                                <span className="flex items-center gap-1">
+                                                    <Drumstick className="w-4 h-4 text-blue-500" />
+                                                    단백질 {subtotals.totalProtein.toFixed(1)}g
+                                                </span>
+
+                                                <span className="flex items-center gap-1">
+                                                    <Droplet className="w-4 h-4 text-yellow-500" />
+                                                    지방 {subtotals.totalFat.toFixed(1)}g
+                                                </span>
+
+                                                <span className="flex items-center gap-1">
+                                                    <Wheat className="w-4 h-4 text-green-500" />
+                                                    탄수화물 {subtotals.totalCarbs.toFixed(1)}g
+                                                </span>
+
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* === 전체 합계 === */}
+                    <div className="mt-6 flex justify-center">
+                        <div className="w-full max-w-[720px] pt-3 text-center text-sm text-gray-700 dark:text-gray-300 flex flex-col items-center gap-3">
+
+                            <div className="flex items-center gap-2 font-semibold text-red-500 dark:text-red-400">
+                                <UtensilsCrossed className="w-4 h-4" />
+                                전체 합계
+                            </div>
+
+                            <div>
+                                총{" "}
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    {totals.totalCalories.toFixed(0)} kcal
+                                </span>{" "}
+                                ·{" "}
+                                <span className="font-semibold text-blue-500 dark:text-blue-400">
+                                    {totals.totalProtein.toFixed(1)}g 단백질
+                                </span>{" "}
+                                ·{" "}
+                                <span className="font-semibold text-yellow-500 dark:text-yellow-400">
+                                    {totals.totalFat.toFixed(1)}g 지방
+                                </span>{" "}
+                                ·{" "}
+                                <span className="font-semibold text-green-500 dark:text-green-400">
+                                    {totals.totalCarbs.toFixed(1)}g 탄수화물
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
+            </AnimatePresence>
+
+            {/* === 버튼 영역 === */}
+            <div className="mt-6 flex justify-end gap-3 max-w-[720px] mx-auto">
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600"
+                >
+                    닫기
+                </button>
+
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg"
+                >
+                    {saving ? "저장 중..." : "저장하기"}
+                </button>
+            </div>
+
+        </div>
     );
 }

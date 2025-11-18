@@ -102,12 +102,14 @@ public class GeminiUnifiedAnalysisService {
             }
         }
 
-        /* -------------------------
-           개별 삭제 (감정)
-           ------------------------- */
+/* -------------------------
+   개별 삭제 (감정)
+   ------------------------- */
         CompletableFuture<EmotionAnalysisResult> emotionFuture;
 
-        if ("DELETE_EMOTION".equals(routed.emotionText())) {
+        String emoText = routed.emotionText();
+
+        if ("DELETE_EMOTION".equalsIgnoreCase(emoText)) {
 
             dailyEmotionService.deleteToday(user);
 
@@ -115,10 +117,13 @@ public class GeminiUnifiedAnalysisService {
                     EmotionAnalysisResult.deleted()
             );
 
+        } else if (emoText == null || emoText.isBlank()) {
+
+            emotionFuture = CompletableFuture.completedFuture(null);
+
         } else {
-            emotionFuture = routed.emotionText().isBlank()
-                    ? CompletableFuture.completedFuture(null)
-                    : emotionService.analyzeEmotion(routed.emotionText());
+
+            emotionFuture = emotionService.analyzeEmotion(emoText);
         }
 
 
@@ -148,11 +153,20 @@ public class GeminiUnifiedAnalysisService {
             dailyLogService.updateActivity(user, savedActivity);
         }
 
-        EmotionSummaryDto savedEmotionDto = null;
-        if (emotionAnalysis != null && !"delete".equals(emotionAnalysis.getAction())) {
-            DailyEmotion savedEmotion = dailyEmotionService.saveDailyEmotion(user, emotionAnalysis);
-            dailyLogService.updateEmotion(user, savedEmotion);
-            savedEmotionDto = dailyEmotionService.toSummaryDto(savedEmotion);
+        EmotionSummaryDto responseEmotionDto = null;
+
+        if (emotionAnalysis != null) {
+
+            // ✅ 1) 삭제 액션이면: DB 저장 X, 삭제용 DTO를 그대로 응답
+            if ("delete".equals(emotionAnalysis.getAction())) {
+                responseEmotionDto = EmotionSummaryDto.deleted();
+            }
+            // ✅ 2) 정상 분석이면: 저장 후 Summary DTO로 변환
+            else {
+                DailyEmotion savedEmotion = dailyEmotionService.saveDailyEmotion(user, emotionAnalysis);
+                dailyLogService.updateEmotion(user, savedEmotion);
+                responseEmotionDto = dailyEmotionService.toSummaryDto(savedEmotion);
+            }
         }
 
 
@@ -162,7 +176,7 @@ public class GeminiUnifiedAnalysisService {
         return UnifiedAnalysisResult.builder()
                 .mealAnalysis(mealAnalysis)
                 .exerciseAnalysis(exerciseAnalysis)
-                .emotionAnalysis(savedEmotionDto)
+                .emotionAnalysis(responseEmotionDto)
                 .build();
     }
 }

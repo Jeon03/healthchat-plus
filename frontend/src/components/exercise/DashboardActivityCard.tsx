@@ -180,10 +180,8 @@ export default function DashboardActivityCard({ onLoaded }: Props) {
                     </div>
 
                     {loading ? (
-                        <p className="text-gray-500 text-sm animate-pulse">
-                            불러오는 중...
-                        </p>
-                    ) : activity ? (
+                        <p className="text-gray-500 text-sm animate-pulse">불러오는 중...</p>
+                    ) : activity && activity.exercises && activity.exercises.length > 0 ? (
                         <>
                             <p className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 leading-tight">
                                 {activity.totalCalories.toFixed(0)} kcal
@@ -196,9 +194,9 @@ export default function DashboardActivityCard({ onLoaded }: Props) {
                             <div className="flex justify-center gap-3 flex-wrap mb-5">
                                 <div
                                     className="
-                                    px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30
-                                    text-blue-600 dark:text-blue-300 text-sm font-medium shadow-sm
-                                "
+                    px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30
+                    text-blue-600 dark:text-blue-300 text-sm font-medium shadow-sm
+                "
                                 >
                                     ⏱ {activity.totalDuration}분 운동
                                 </div>
@@ -218,6 +216,7 @@ export default function DashboardActivityCard({ onLoaded }: Props) {
                             </p>
                         </div>
                     )}
+
                 </div>
             </motion.div>
 

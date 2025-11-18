@@ -7,6 +7,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import CategoryDonutWithPartChart from "../charts/CategoryDonutWithPartChart.tsx";
 
+// ✔ lucide-react 아이콘
+import { Activity, Flame, Clock, Zap } from "lucide-react";
+
 export interface ExerciseItem {
     name: string;
     durationMin: number;
@@ -36,17 +39,17 @@ export default function ActivityDetailModal({
                                                 onClose,
                                                 onUpdated
                                             }: ActivityDetailModalProps) {
+
     const [items, setItems] = useState<ExerciseItem[]>([]);
     const [saving, setSaving] = useState(false);
     const [currentDate, setCurrentDate] = useState(new Date(activity.date));
     const [slideDir, setSlideDir] = useState(0);
-    /** 초기 파싱 */
+
     useEffect(() => {
         setItems(activity.exercises || []);
         setCurrentDate(new Date(activity.date));
     }, [activity]);
 
-    /** 날짜 기반 운동 불러오기 */
     const fetchActivityByDate = async (dateStr: string) => {
         try {
             const res = await api.get(`/ai/activity/${dateStr}`);
@@ -55,20 +58,19 @@ export default function ActivityDetailModal({
                 toast.info("해당 날짜의 운동이 없습니다.");
                 return;
             }
-
             setItems(res.data.exercises);
             setCurrentDate(new Date(dateStr));
         } catch {
             toast.error("운동 정보를 불러오지 못했습니다.");
         }
     };
-    /** 전날/다음날 이동 */
+
     const moveToDate = async (offset: number) => {
         setSlideDir(offset);
         const next = dayjs(currentDate).add(offset, "day").format("YYYY-MM-DD");
         await fetchActivityByDate(next);
     };
-    /** DatePicker 날짜 변경 */
+
     const handleDateChange = async (date: Date | null) => {
         if (!date) return;
         const formatted = dayjs(date).format("YYYY-MM-DD");
@@ -76,7 +78,6 @@ export default function ActivityDetailModal({
         await fetchActivityByDate(formatted);
     };
 
-    /** 값 변경 */
     const setField = (index: number, field: keyof ExerciseItem, value: string) => {
         setItems(prev =>
             prev.map((item, i) =>
@@ -93,7 +94,6 @@ export default function ActivityDetailModal({
         );
     };
 
-    /** 저장 */
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -116,7 +116,6 @@ export default function ActivityDetailModal({
         }
     };
 
-    /** 누적 계산 */
     const totalCalories = items.reduce((sum, i) => sum + (i.calories || 0), 0);
     const totalDuration = items.reduce((sum, i) => sum + (i.durationMin || 0), 0);
 
@@ -152,9 +151,12 @@ export default function ActivityDetailModal({
                     </button>
                 </div>
 
-                {/* 총합 */}
-                <div className="px-4 py-2 rounded-xl text-center bg-blue-100 dark:bg-blue-800/30 text-blue-700 dark:text-blue-300">
-                    <div className="font-semibold text-sm">🏃 총 소모 칼로리 {totalCalories} kcal</div>
+                {/* 총합 (아이콘 적용) */}
+                <div className="px-4 py-2 rounded-xl text-center bg-blue-100 dark:bg-blue-800/30 text-blue-700 dark:text-blue-300 flex flex-col items-center">
+                    <div className="font-semibold text-sm flex items-center gap-1">
+                        <Activity className="w-4 h-4" />
+                        총 소모 칼로리 {totalCalories} kcal
+                    </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         운동시간 {totalDuration}분
                     </div>
@@ -164,8 +166,9 @@ export default function ActivityDetailModal({
             {/* === 권장 운동 소모량 게이지 === */}
             <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700 shadow-inner">
                 <div className="flex justify-between mb-1">
-                    <span className="text-blue-600 dark:text-blue-300 font-semibold">
-                        🔥 권장 운동 소모량
+                    <span className="text-blue-600 dark:text-blue-300 font-semibold flex items-center gap-1">
+                        <Zap className="w-4 h-4" />
+                        권장 운동 소모량
                     </span>
                     <span className="font-medium text-gray-700 dark:text-gray-300">
                         {totalCalories} / {recommendedBurn} kcal
@@ -175,18 +178,21 @@ export default function ActivityDetailModal({
                 <div className="w-full bg-blue-200/40 dark:bg-blue-800/30 rounded-full h-3 overflow-hidden">
                     <div
                         style={{ width: `${burnRatio}%` }}
-                        className="h-full bg-gradient-to-r from-blue-400 to-blue-600
-                            dark:from-blue-500 dark:to-blue-300
-                            rounded-full shadow-[0_0_8px_rgba(96,165,250,0.7)] transition-all"
+                        className="h-full bg-gradient-to-r from-blue-400 to-blue-600 dark:from-blue-500 dark:to-blue-300 rounded-full shadow-[0_0_8px_rgba(96,165,250,0.7)] transition-all"
                     ></div>
                 </div>
             </div>
+
             {/* === 전체 요약 === */}
-            <div className="mt-6 text-center text-sm text-gray-700 dark:text-gray-300">
-                <span className="font-semibold text-blue-500 dark:text-blue-400">🏃 전체 합계:</span>
-                {" "}
+            <div className="mt-6 text-center text-sm text-gray-700 dark:text-gray-300 flex justify-center items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                <span className="font-semibold text-blue-500 dark:text-blue-400">
+                    전체 합계:
+                </span>
                 {totalCalories} kcal · {totalDuration}분
             </div>
+
+            {/* 차트 */}
             <div className="my-10 flex justify-center">
                 <CategoryDonutWithPartChart
                     data={items.map(i => ({
@@ -196,6 +202,7 @@ export default function ActivityDetailModal({
                     }))}
                 />
             </div>
+
             {/* === 운동 리스트 === */}
             <AnimatePresence mode="wait">
                 <motion.div
@@ -208,8 +215,10 @@ export default function ActivityDetailModal({
                     <div className="overflow-y-auto px-2" style={{ maxHeight: "calc(100vh - 320px)" }}>
                         <div className="flex justify-center">
                             <div className="w-full max-w-[720px] space-y-6">
+
                                 {items.map((item, i) => (
                                     <div key={i} className="pb-4 border-b border-gray-200/40 dark:border-gray-700/40">
+
                                         <h3 className="font-semibold text-lg mb-2 text-gray-800 dark:text-gray-200">
                                             {item.name || `운동 ${i + 1}`}
                                         </h3>
@@ -232,11 +241,22 @@ export default function ActivityDetailModal({
                                             />
                                         </div>
 
-                                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                                            🔥 {item.calories} kcal · ⏱ {item.durationMin}분
+                                        {/* 🔥⏱ 아이콘 적용 */}
+                                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-4">
+                                            <span className="flex items-center gap-1">
+                                                <Flame className="w-4 h-4 text-red-500/80" />
+                                                {item.calories} kcal
+                                            </span>
+
+                                            <span className="flex items-center gap-1">
+                                                <Clock className="w-4 h-4 text-gray-500" />
+                                                {item.durationMin}분
+                                            </span>
                                         </div>
+
                                     </div>
                                 ))}
+
                             </div>
                         </div>
                     </div>
@@ -260,6 +280,7 @@ export default function ActivityDetailModal({
                     {saving ? "저장 중..." : "저장하기"}
                 </button>
             </div>
+
         </div>
     );
 }

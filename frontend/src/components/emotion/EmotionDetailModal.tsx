@@ -7,6 +7,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import EmotionPieChart from "../charts/EmotionPieChart.tsx";
 
+import {FiFileText } from "react-icons/fi";
+
 /** EmotionSummaryDto 형태 */
 interface EmotionSummaryDto {
     primaryEmotion: string;
@@ -44,6 +46,7 @@ const EMOTION_COLORS: Record<string, string> = {
     "중립": "#A1A1AA",
     "무감정": "#A1A1AA",
 };
+
 export default function EmotionDetailModal({ emotion, onClose }: Props) {
 
     const initialDate = emotion?.date ? new Date(emotion.date) : new Date();
@@ -70,12 +73,12 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
 
             if (typeof res.data === "string") {
                 toast.info("해당 날짜의 감정 데이터가 없습니다.");
-                return false; // ❗ 실패
+                return false;
             }
 
             setCurrent(res.data);
             setCurrentDate(new Date(dateStr));
-            return true; // 성공
+            return true;
         } catch {
             toast.error("감정 정보를 불러오지 못했습니다.");
             return false;
@@ -84,14 +87,11 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
 
     const moveToDate = async (offset: number) => {
         const next = dayjs(currentDate).add(offset, "day").format("YYYY-MM-DD");
-
-        // 먼저 슬라이드 방향 설정
         setSlideDir(offset);
 
         const ok = await fetchEmotionByDate(next);
 
         if (!ok) {
-            // ❗ 실패 시 날짜 복원 + 슬라이드 취소
             setSlideDir(0);
         }
     };
@@ -105,7 +105,6 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
         const ok = await fetchEmotionByDate(formatted);
 
         if (!ok) {
-            // 실패 시 DatePicker 날짜도 되돌림
             setCurrentDate(current?.date ? new Date(current.date) : new Date());
         }
     };
@@ -149,10 +148,12 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                     </div>
                 )}
             </div>
+
             <EmotionPieChart
                 emotions={current?.emotions ?? []}
                 scores={current?.scores ?? []}
             />
+
             {/* === 감정 상세 === */}
             <AnimatePresence mode="wait">
                 <motion.div
@@ -180,9 +181,9 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                                 .map((item, idx) => {
 
                                     const baseColor = EMOTION_COLORS[item.emotion] || "#FBCFE8";
-                                    const bgColor = `${baseColor}20`;   // 연한 배경 (투명 20)
-                                    const borderColor = `${baseColor}40`; // 테두리 연하게
-                                    const textColor = baseColor; // 제목 색상
+                                    const bgColor = `${baseColor}20`;
+                                    const borderColor = `${baseColor}40`;
+                                    const textColor = baseColor;
 
                                     return (
                                         <div
@@ -193,6 +194,7 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                                                 border: `1px solid ${borderColor}`
                                             }}
                                         >
+
                                             {/* 감정명 + 점수 */}
                                             <div className="text-lg font-bold" style={{ color: textColor }}>
                                                 {item.emotion} ({item.score})
@@ -215,8 +217,8 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                                                                 color: textColor
                                                             }}
                                                         >
-                                {k}
-                            </span>
+                                                            {k}
+                                                        </span>
                                                     ))}
                                                 </div>
                                             )}
@@ -224,13 +226,23 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                                     );
                                 })}
 
-                            {/* 전체 원문 */}
+                            {/* === 감정 원문 (React Icon 적용) === */}
                             <div className="mt-6">
-                                <h3 className="text-lg font-semibold mb-2 text-gray-300">📝 감정 원문</h3>
-                                <p className="text-gray-400 whitespace-pre-line">
+                                {/* 제목 */}
+                                <h3 className="text-lg font-semibold mb-2
+                   text-gray-700 dark:text-gray-200
+                   flex items-center gap-2">
+                                    <FiFileText className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                                    감정 원문
+                                </h3>
+
+                                {/* 본문 */}
+                                <p className="whitespace-pre-line
+                  text-gray-600 dark:text-gray-300">
                                     {current.rawText}
                                 </p>
                             </div>
+
 
                         </div>
                     ) : (
@@ -241,7 +253,7 @@ export default function EmotionDetailModal({ emotion, onClose }: Props) {
                 </motion.div>
             </AnimatePresence>
 
-            {/* === 버튼 === */}
+            {/* === 닫기 버튼 === */}
             <div className="mt-6 flex justify-end">
                 <button
                     onClick={onClose}
