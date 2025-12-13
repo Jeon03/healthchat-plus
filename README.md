@@ -92,19 +92,12 @@
 
 ## 🎬 시연 영상 (Demo)
 
-<video
-  src="assets/demo_web.mp4"
-  controls
-  muted
-  playsinline
-  width="100%">
-  브라우저가 video 태그를 지원하지 않습니다.
-</video>
+[![HealthChat+ Demo](https://img.youtube.com/vi/QBMxtf1YZhg/hqdefault.jpg)](
+https://www.youtube.com/watch?v=QBMxtf1YZhg
+)
 
----
-
-### ▶ YouTube 시연 영상
-- https://www.youtube.com/watch?v=QBMxtf1YZhg
+- ▶ YouTube 시연 영상  
+  https://www.youtube.com/watch?v=QBMxtf1YZhg
 
 
 ## Contact
