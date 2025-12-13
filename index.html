@@ -1,276 +1,582 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HealthChat+ | 프로젝트 상세 내역서</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Inter 폰트 설정 */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7f9fb; /* 아주 연한 배경색 */
-        }
-        .section-title {
-            position: relative;
-            padding-bottom: 0.5rem;
-        }
-        .section-title::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            width: 40px;
-            height: 4px;
-            background-color: #0d9488; /* Teal Accent */
-            border-radius: 9999px;
-        }
-        .quote-block {
-            border-left: 4px solid #34d399; /* Emerald Accent */
-            background-color: #ecfdf5;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HealthChat+ | 프로젝트 상세 내역서</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+    :root {
+      --accent: #0d9488;   /* teal-600 */
+      --accent2: #34d399;  /* emerald-400 */
+      --bg: #f7f9fb;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      letter-spacing: 0.2px;
+      color: #111827;
+    }
+
+    /* Section title underline */
+    .section-title {
+      position: relative;
+      padding-bottom: .5rem;
+    }
+    .section-title::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 42px;
+      height: 4px;
+      background-color: var(--accent);
+      border-radius: 9999px;
+    }
+
+    .quote-block {
+      border-left: 4px solid var(--accent2);
+      background-color: #ecfdf5;
+    }
+
+    /* Subtle motion */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(10px) scale(.995);
+      animation: fadeUp .55s ease forwards;
+    }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .delay-1 { animation-delay: .05s; }
+    .delay-2 { animation-delay: .10s; }
+    .delay-3 { animation-delay: .15s; }
+    .delay-4 { animation-delay: .20s; }
+    .delay-5 { animation-delay: .25s; }
+    .delay-6 { animation-delay: .30s; }
+    .delay-7 { animation-delay: .35s; }
+
+    /* Soft glow on hover */
+    .glow {
+      transition: box-shadow .25s ease, transform .25s ease;
+    }
+    .glow:hover {
+      box-shadow: 0 18px 40px rgba(13, 148, 136, .14);
+      transform: translateY(-2px);
+    }
+
+    /* Sticky TOC */
+    .toc-shadow {
+      box-shadow: 0 10px 30px rgba(2, 6, 23, .08);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Print styles */
+    @media print {
+      .no-print { display: none !important; }
+      body { background: white; }
+      .shadow-xl, .shadow-md, .shadow-2xl { box-shadow: none !important; }
+      .rounded-2xl { border-radius: 12px !important; }
+      a[href]::after { content: " (" attr(href) ")"; font-size: 11px; color: #64748b; }
+    }
+  </style>
 </head>
+
 <body>
-    <div class="max-w-4xl mx-auto p-4 sm:p-8 space-y-12">
+  <!-- Top sticky TOC -->
+  <div class="no-print sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-8 py-3">
+      <div class="toc-shadow bg-white/80 border border-gray-200 rounded-2xl px-4 py-3 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div class="flex items-center gap-3">
 
-        <!-- Header Section -->
-        <header class="text-center py-10 bg-white shadow-xl rounded-2xl">
-            <div class="inline-block p-3 rounded-full bg-teal-500 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z" />
-                </svg>
-            </div>
-            <h1 class="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2">HealthChat+</h1>
-            <p class="text-xl text-teal-600 font-semibold">AI 기반 초개인화 건강 코치 플랫폼</p>
-        </header>
+          <div>
+            <p class="text-sm font-semibold text-slate-900">HealthChat+</p>
+            <p class="text-xs text-slate-500">AI 기반 초개인화 건강 코치</p>
+          </div>
+        </div>
 
-        <!-- 1. 기본 정보 & 핵심 가치 -->
-        <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
-            <h2 class="section-title text-2xl font-bold text-gray-800">1. 기본 정보 & 핵심 가치</h2>
-
-            <div class="space-y-4">
-                <h3 class="text-xl font-semibold text-gray-700">개발자: 전여욱</h3>
-                <div class="quote-block p-4 pl-6 rounded-lg text-teal-800 font-medium italic">
-                    <p>사용자의 행동과 감정을 이해하고, 과학적 근거 기반으로 더 건강한 방향을 제시하는 개발자</p>
-                </div>
-
-                <h3 class="text-xl font-semibold text-gray-700 mt-6">상세 소개</h3>
-                <p class="text-gray-600 leading-relaxed">
-                    저는 헬스케어 서비스에서 가장 중요한 가치는 ‘사용자 경험’과 ‘근거 기반의 신뢰성’이라고 생각합니다.
-                </p>
-                <p class="text-gray-600 leading-relaxed">
-                    HealthChat+는 사용자가 자연어로 입력한 식단·운동·감정 데이터를 AI가 분석하고, 국제 보건 기구(WHO), 식품영양학 기준, 질병관리청 자료 등의 정보를 근거로 한 초개인화 피드백을 제공하는 것을 목표로 개발되었습니다.
-                </p>
-                <p class="text-gray-600 leading-relaxed font-medium">
-                    핵심 차별점은 단순 요약이 아닌, <span class="text-teal-600">“왜 이런 피드백을 주는가?”에 대한 과학적 설명을 함께 제공</span>하는 것입니다. 이 프로젝트를 통해 AI 분석 기술, 건강 데이터 구조화, 신뢰성 있는 피드백 엔진 설계 등 풀스택 관점의 다양한 개발 경험을 쌓았습니다.
-                </p>
-
-                <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">연락처/링크</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">정보</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">E-mail</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 transition"><a href="mailto:jeonyu2589@naver.com">jeonyu2589@naver.com</a></td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">GitHub</td>
-                                <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 transition"><a href="https://github.com/Jeon03" target="_blank">https://github.com/Jeon03</a></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-
-        <!-- 2. 기술 스택 (Technical Skills) -->
-        <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
-            <h2 class="section-title text-2xl font-bold text-gray-800">2. 기술 스택 (Technical Skills)</h2>
-            <p class="text-gray-600">HealthChat+는 안정성과 확장성을 고려하여 풀스택 구조로 설계되었습니다.</p>
-
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="p-4 bg-teal-50 rounded-lg shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Frontend</p>
-                    <p class="text-base font-medium text-gray-900">React, TypeScript, Tailwind CSS</p>
-                </div>
-                <div class="p-4 bg-teal-50 rounded-lg shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Backend</p>
-                    <p class="text-base font-medium text-gray-900">Spring Boot, MySQL</p>
-                </div>
-                <div class="p-4 bg-teal-50 rounded-lg shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-teal-600 mb-1">AI/ML</p>
-                    <p class="text-base font-medium text-gray-900">Gemini API (Function Calling)</p>
-                </div>
-                <div class="p-4 bg-teal-50 rounded-lg shadow-sm">
-                    <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Infra & DevOps</p>
-                    <p class="text-base font-medium text-gray-900">Docker, AWS EC2, Git</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- 3. 프로젝트 상세: 시스템 & 기능 -->
-        <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-8">
-            <h2 class="section-title text-2xl font-bold text-gray-800">3. 프로젝트 상세: 시스템 & 기능</h2>
-
-            <!-- 문제 정의 -->
-            <div class="space-y-3">
-                <h3 class="text-xl font-semibold text-teal-600">문제 정의 (Problem Statement)</h3>
-                <p class="text-gray-600 border-l-4 border-yellow-500 pl-3 italic">
-                    대부분의 건강 관리 앱이 단순 기록에만 집중하고, 공신력 있는 근거 기반의 “신뢰도 높은 피드백” 제공에 한계가 있다는 문제점에서 프로젝트를 시작했습니다.
-                </p>
-            </div>
-
-            <!-- 아키텍처 및 설계 -->
-            <div class="space-y-3">
-                <h3 class="text-xl font-semibold text-teal-600">아키텍처 및 설계 (Architecture & Design)</h3>
-                <ul class="list-disc list-inside space-y-1 pl-3 text-gray-600">
-                    <li>데이터 플로우: 자연어 입력 → Gemini Function Calling → 음식·운동·감정 분석 및 구조화</li>
-                    <li>AI 피드백: WHO, 질병관리청, 영양학 논문 등의 자료를 참고한 규칙 기반 가이드 포함.</li>
-                    <li>개인화: 사용자 프로필(키, 몸무게, 목표, 수면, 알레르기) 기반 초개인화 분석.</li>
-                    <li>구조: Spring Boot REST API (Backend) + React/Tailwind CSS (Frontend)</li>
-                    <li>배포: AWS EC2 기반 Docker 컨테이너 배포</li>
-                </ul>
-            </div>
-
-            <!-- 핵심 기능 -->
-            <h3 class="text-2xl font-bold text-gray-800 pt-4">핵심 기능 (Core Features)</h3>
-            
-            <div class="space-y-6">
-                <!-- 3.1 -->
-                <div class="p-5 bg-gray-50 rounded-xl shadow-md space-y-2">
-                    <h4 class="text-lg font-bold text-teal-700">3.1. 자연어 기반 식단·운동·감정 통합 분석</h4>
-                    <p class="text-sm text-gray-600">사용자의 일상적인 자연어 입력에서 AI가 핵심 건강 데이터를 자동 추출하고 DB에 구조화합니다.</p>
-                    <ul class="text-sm list-inside pl-3 space-y-0.5">
-                        <li class="font-semibold text-gray-800">AI 추출 데이터:
-                            <span class="font-normal text-gray-600">식단 (음식명, 칼로리, 영양소), 운동 (종류, 강도·시간), 감정 (톤, 키워드)</span>
-                        </li>
-                    </ul>
-                    <div class="mt-3 p-3 bg-white border border-dashed border-teal-300 rounded-lg text-sm text-gray-700">
-                        <p class="font-bold mb-1">기술 적용 예시:</p>
-                        <p class="pl-2">“오늘 우울해서 초콜릿 먹고 20분 산책했어” → Gemini Function Calling을 통해 감정: 우울, 음식: 초콜릿, 운동: 산책 20분으로 정형화하여 저장.</p>
-                    </div>
-                </div>
-
-                <!-- 3.2 -->
-                <div class="p-5 bg-gray-50 rounded-xl shadow-md space-y-2">
-                    <h4 class="text-lg font-bold text-teal-700">3.2. 공신력 기반 AI 초개인화 건강 요약</h4>
-                    <p class="text-sm text-gray-600">AI 피드백은 공신력 있는 기관의 기준을 근거로 제시되어 신뢰도를 극대화합니다. AI 분석 결과 + 근거 설명 구성.</p>
-                    <ul class="text-sm list-inside pl-3 space-y-0.5">
-                        <li class="font-semibold text-gray-800">주요 참조 기준:
-                            <span class="font-normal text-gray-600">WHO 권장량/운동 기준, 질병관리청(KDCA) 가이드, 한국인 영양섭취기준(KDRI).</span>
-                        </li>
-                    </ul>
-                    <div class="mt-3 p-3 bg-white border border-dashed border-teal-300 rounded-lg text-sm text-gray-700">
-                        <p class="font-bold mb-1">피드백 예시:</p>
-                        <p class="pl-2">“WHO 기준 성인의 하루 권장 운동량(150~300분) 대비 최근 7일 평균 운동 시간이 부족한 편입니다.”</p>
-                    </div>
-                </div>
-
-                <!-- 3.3 -->
-                <div class="p-5 bg-gray-50 rounded-xl shadow-md space-y-2">
-                    <h4 class="text-lg font-bold text-teal-700">3.3. 감정 기반 건강 트렌드 분석</h4>
-                    <p class="text-sm text-gray-600">감정 데이터와 건강 데이터의 결합 분석을 통해 사용자 스스로 자신의 생활 패턴을 진단할 수 있도록 지원합니다.</p>
-                    <ul class="list-disc text-sm list-inside pl-3 space-y-0.5 text-gray-600">
-                        <li>분석 항목: 감정 변화가 식습관/운동 패턴에 미치는 상관관계 분석.</li>
-                        <li>트렌드 시각화: 스트레스-탄수화물 섭취량, 우울 점수-운동 시간 등 상관관계 그래프 제공.</li>
-                    </ul>
-                </div>
-
-                <!-- 3.4 -->
-                <div class="p-5 bg-gray-50 rounded-xl shadow-md space-y-2">
-                    <h4 class="text-lg font-bold text-teal-700">3.4. 개인 프로필 기반 맞춤 분석</h4>
-                    <p class="text-sm text-gray-600">사용자 프로필 설정 정보(목표, 알레르기, 약 복용 등)를 반영하여 정교하고 맞춤화된 코칭을 제공합니다.</p>
-                    <ul class="list-disc text-sm list-inside pl-3 space-y-0.5 text-gray-600">
-                        <li>맞춤 분석: 목표 체중 기반 칼로리 초과 여부 판단, 알레르기 위험 감지, 약 복용에 따른 식단 조정 등.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 4. 기여 및 성과 -->
-        <section class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-8">
-            <h2 class="section-title text-2xl font-bold text-gray-800">4. 기여 및 성과</h2>
-
-            <!-- 나의 역할 -->
-            <div class="space-y-3">
-                <h3 class="text-xl font-semibold text-teal-600">나의 역할 (My Role & Contribution)</h3>
-                <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600">
-                    <li class="font-medium"><span class="text-teal-700">풀스택 리더십:</span> 전체 서비스 아키텍처(FE/BE) 설계 및 개발 주도.</li>
-                    <li class="font-medium"><span class="text-teal-700">AI 엔지니어링:</span> Gemini Function Calling 기반의 복잡한 자연어 파싱 모듈 개발.</li>
-                    <li class="font-medium"><span class="text-teal-700">핵심 로직:</span> 공신력 있는 자료를 시스템화한 피드백 규칙 엔진 설계 및 구현.</li>
-                    <li class="font-medium"><span class="text-teal-700">데이터/API:</span> 건강 데이터 모델링 및 Spring Boot 기반 REST API 개발.</li>
-                    <li class="font-medium"><span class="text-teal-700">인터페이스:</span> React/Tailwind CSS 기반 시각화 대시보드 제작.</li>
-                    <li class="font-medium"><span class="text-teal-700">인프라:</span> OAuth2 + JWT 인증 구현 및 AWS EC2 배포 구성.</li>
-                </ul>
-            </div>
-
-            <!-- 결과 및 성과 -->
-            <div class="space-y-3 pt-4">
-                <h3 class="text-xl font-semibold text-teal-600">결과 및 성과 (Results & Achievements)</h3>
-                <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600 font-medium">
-                    <li>식단·운동·감정 통합 분석 파이프라인 자동화 성공.</li>
-                    <li>WHO/영양 기준 기반의 신뢰도 높은 피드백 제공으로 서비스 신뢰도 확보.</li>
-                    <li>초개인화된 건강 리포트를 통한 사용자 경험 및 서비스 몰입도 증가.</li>
-                </ul>
-            </div>
-
-            <!-- 회고 및 학습 -->
-            <div class="space-y-4 pt-4">
-                <h3 class="text-xl font-semibold text-teal-600">회고 및 학습 (Retrospective)</h3>
-
-                <div class="border border-gray-100 rounded-xl overflow-hidden">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">분류</th>
-                                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">주요 학습 내용</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            <tr>
-                                <td class="px-4 py-3 text-sm font-medium text-gray-900">AI 설계</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">AI 분석 결과에 <span class="text-teal-600 font-semibold">“근거”를 연결하는 설계</span>의 중요성 및 시스템적 구현 경험.</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-3 text-sm font-medium text-gray-900">기술</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">Gemini Function Calling을 활용한 복합 자연어 데이터 정형화 경험.</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-3 text-sm font-medium text-gray-900">백엔드</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">공신력 있는 자료를 시스템 로직(규칙 엔진)에 반영하는 설계 경험.</td>
-                            </tr>
-                            <tr>
-                                <td class="px-4 py-3 text-sm font-medium text-gray-900">풀스택</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">FE/BE 연결 구조 및 AWS EC2 기반 배포 환경 전반에 대한 이해 향상.</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="pt-4">
-                    <h4 class="text-lg font-semibold text-red-500">개선점 (Future Work)</h4>
-                    <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600">
-                        <li>피드백 엔진을 더욱 세밀한 기준 기반으로 고도화하여 코칭 품질 향상.</li>
-                        <li>감정 분석 정확도를 개선하여 사용자 감정 변화에 대한 미묘한 대응 기능 강화.</li>
-                        <li>실시간으로 상황을 판단하여 행동을 추천하는 선제적 건강 관리 기능 추가 예정.</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer class="text-center py-6 text-gray-500 text-sm">
-            <p>&copy; HealthChat+ Project Detail | Powered by Gemini</p>
-        </footer>
-
+        <nav class="flex flex-wrap gap-2 text-sm">
+          <a href="#about" class="px-3 py-1 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 transition">기본 정보</a>
+          <a href="#stack" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">기술 스택</a>
+          <a href="#planning" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">개발 목표</a>
+          <a href="#features" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">개발 기능</a>
+          <a href="#detail" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">시스템/기능</a>
+          <a href="#screens" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">스크린샷/시연</a>
+          <a href="#results" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">성과/회고</a>
+          <a href="#evaluation" class="px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition">평가</a>
+        </nav>
+      </div>
     </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto p-4 sm:p-8 space-y-12">
+
+    <!-- Header -->
+    <header class="text-center py-10 bg-white shadow-xl rounded-2xl fade-up">
+
+      <h1 class="mt-4 text-4xl sm:text-5xl font-extrabold text-gray-900 mb-2">HealthChat+</h1>
+      <p class="text-xl text-teal-600 font-semibold">AI 기반 초개인화 건강 코치 플랫폼</p>
+
+      <!-- Quick summary cards -->
+      <div class="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 px-6">
+        <div class="glow rounded-2xl border border-gray-200 bg-white p-4 text-left">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">One-liner</p>
+          <p class="text-sm text-gray-700">자연어 한 줄 → 식단·운동·감정 자동 구조화 → 근거 기반 피드백</p>
+        </div>
+        <div class="glow rounded-2xl border border-gray-200 bg-white p-4 text-left">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Key Strength</p>
+          <p class="text-sm text-gray-700">“왜 이런 조언을 하는가”를 근거와 함께 제시</p>
+        </div>
+        <div class="glow rounded-2xl border border-gray-200 bg-white p-4 text-left">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Target</p>
+          <p class="text-sm text-gray-700">기록을 꾸준히 못 하는 사용자도 “대화하듯” 입력</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. 기본 정보 -->
+    <section id="about" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 fade-up delay-1">
+      <h2 class="section-title text-2xl font-bold text-gray-800">1. 기본 정보 & 핵심 가치</h2>
+
+      <div class="space-y-4">
+        <h3 class="text-xl font-semibold text-gray-700">개발자: 전여욱</h3>
+        <div class="quote-block p-4 pl-6 rounded-xl text-teal-800 font-medium italic">
+          <p>사용자의 행동과 감정을 이해하고, 과학적 근거 기반으로 더 건강한 방향을 제시하는 개발자</p>
+        </div>
+
+        <h3 class="text-xl font-semibold text-gray-700 mt-6">상세 소개</h3>
+        <p class="text-gray-600 leading-relaxed">
+          저는 헬스케어 서비스에서 가장 중요한 가치는 ‘사용자 경험’과 ‘근거 기반의 신뢰성’이라고 생각합니다.
+        </p>
+        <p class="text-gray-600 leading-relaxed">
+          HealthChat+는 사용자가 자연어로 입력한 식단·운동·감정 데이터를 AI가 분석하고, 국제 보건 기구(WHO),
+          질병관리청(KDCA), 한국인 영양섭취기준(KDRI) 등 공신력 있는 기준을 참고해 <b>초개인화 피드백</b>을 제공하는 것을 목표로 개발되었습니다.
+        </p>
+        <p class="text-gray-600 leading-relaxed font-medium">
+          핵심 차별점은 단순 요약이 아닌, <span class="text-teal-600">“왜 이런 피드백을 주는가?”</span>에 대한
+          <span class="text-teal-600">근거/설명</span>을 함께 제공하는 것입니다.
+        </p>
+
+        <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">연락처/링크</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">정보</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">E-mail</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 transition">
+                  <a href="mailto:jeonyu2589@naver.com">jeonyu2589@naver.com</a>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">GitHub</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800 transition">
+                  <a href="https://github.com/Jeon03" target="_blank" rel="noopener noreferrer">https://github.com/Jeon03</a>
+                </td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">Deployment</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">AWS EC2 + Docker</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 기술 스택 -->
+    <section id="stack" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 fade-up delay-2">
+      <h2 class="section-title text-2xl font-bold text-gray-800">2. 기술 스택 (Technical Skills)</h2>
+      <p class="text-gray-600">HealthChat+는 안정성과 확장성을 고려하여 풀스택 구조로 설계되었습니다.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 bg-teal-50 rounded-2xl border border-teal-100 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Frontend</p>
+          <p class="text-base font-medium text-gray-900">React, TypeScript, Tailwind CSS</p>
+        </div>
+        <div class="p-4 bg-teal-50 rounded-2xl border border-teal-100 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Backend</p>
+          <p class="text-base font-medium text-gray-900">Spring Boot, MySQL</p>
+        </div>
+        <div class="p-4 bg-teal-50 rounded-2xl border border-teal-100 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">AI/ML</p>
+          <p class="text-base font-medium text-gray-900">Gemini API</p>
+        </div>
+        <div class="p-4 bg-teal-50 rounded-2xl border border-teal-100 shadow-sm">
+          <p class="text-xs font-semibold uppercase text-teal-600 mb-1">Infra & DevOps</p>
+          <p class="text-base font-medium text-gray-900">Docker, AWS EC2, Git</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2-1. 기획 내역 (개발 목표) -->
+    <section id="planning" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-6 fade-up delay-3">
+      <h2 class="section-title text-2xl font-bold text-gray-800">2-1. 기획 내역 (개발 목표)</h2>
+
+      <p class="text-gray-600 leading-relaxed">
+        HealthChat+는 기존 건강 관리 서비스가 가진 <b>기록의 번거로움</b>과
+        <b>AI 피드백에 대한 신뢰 부족</b> 문제를 해결하기 위해 기획되었습니다.
+      </p>
+
+      <ul class="list-disc list-inside space-y-2 pl-3 text-gray-600">
+        <li><span class="font-semibold text-gray-800">자연어 기반 기록</span>: 일상 문장 한 줄로 식단·운동·감정 기록</li>
+        <li><span class="font-semibold text-gray-800">근거 기반 AI 피드백</span>: WHO·KDCA·KDRI 등 기준과 함께 설명 제공</li>
+        <li><span class="font-semibold text-gray-800">초개인화 건강 코칭</span>: 목표·신체정보·수면·알레르기 반영</li>
+        <li><span class="font-semibold text-gray-800">하루 단위 통합 관리</span>: 일일 로그(Daily Log) 중심으로 관리</li>
+      </ul>
+    </section>
+
+    <!-- 2-2. 개발 기능 -->
+    <section id="features" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-8 fade-up delay-4">
+      <h2 class="section-title text-2xl font-bold text-gray-800">2-2. 개발 기능</h2>
+
+      <div class="space-y-6">
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <h3 class="text-lg font-semibold text-teal-700 mb-2">🧠 자연어 분석 및 라우팅</h3>
+          <ul class="list-disc list-inside pl-3 text-gray-600 space-y-1">
+            <li>사용자 입력 문장을 식단·운동·감정 영역으로 자동 분리</li>
+            <li>Gemini API 기반 구조화(JSON) 처리</li>
+            <li>불완전 입력에 대한 fallback 로직</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <h3 class="text-lg font-semibold text-teal-700 mb-2">🍽 식단 · 🏃 운동 · ❤️ 감정 분석</h3>
+          <ul class="list-disc list-inside pl-3 text-gray-600 space-y-1">
+            <li>식단: 음식명/섭취 맥락 분석</li>
+            <li>운동: 종류/시간 기반 활동 분석</li>
+            <li>감정: 감정 상태/톤 분석</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <h3 class="text-lg font-semibold text-teal-700 mb-2">📒 일일 로그(Daily Log) 통합</h3>
+          <ul class="list-disc list-inside pl-3 text-gray-600 space-y-1">
+            <li>식단·운동·감정 데이터를 하루 단위로 통합 저장</li>
+            <li>날짜별 조회 및 수정 기능</li>
+            <li>대시보드용 집계 데이터 생성</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <h3 class="text-lg font-semibold text-teal-700 mb-2">🤖 AI Health Coach</h3>
+          <ul class="list-disc list-inside pl-3 text-gray-600 space-y-1">
+            <li>Daily Log 기반 종합 건강 요약 생성</li>
+            <li>RAG DB 기반 근거/참고문헌 제공</li>
+            <li>사용자 목표에 맞춘 개선 방향 제안</li>
+          </ul>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+          <h3 class="text-lg font-semibold text-teal-700 mb-2">👤 사용자 프로필 관리</h3>
+          <ul class="list-disc list-inside pl-3 text-gray-600 space-y-1">
+            <li>신체 정보, 목표, 수면, 알레르기 설정</li>
+            <li>프로필 기반 개인화 분석 로직 적용</li>
+          </ul>
+        </div>
+
+        <!-- ✅ 복합 문장 예시 추가 (아침/점심/저녁 포함) -->
+        <div class="p-4 rounded-2xl border border-teal-200 bg-teal-50">
+          <p class="text-sm font-bold text-teal-800">복합 입력 예시 (아침/점심/저녁 포함)</p>
+          <p class="mt-2 text-sm text-teal-900">
+            “아침에 그릭요거트랑 바나나 먹었고, 점심은 김밥 1줄 먹었어. 저녁엔 삼겹살을 좀 많이 먹었는데
+            오늘은 스트레스가 있어서 20분 산책했어.”
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 프로젝트 상세 -->
+    <section id="detail" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-8 fade-up delay-5">
+      <h2 class="section-title text-2xl font-bold text-gray-800">3. 프로젝트 상세: 시스템 & 기능</h2>
+
+      <!-- Problem -->
+      <div class="space-y-3">
+        <h3 class="text-xl font-semibold text-teal-600">문제 정의 (Problem Statement)</h3>
+        <p class="text-gray-600 border-l-4 border-yellow-500 pl-3 italic">
+          대부분의 건강 관리 앱이 단순 기록에 집중하고, 사용자 맥락(목표/수면/알레르기/감정)을 반영한 “신뢰도 높은 피드백” 제공에는 한계가 있다는 문제에서 출발했습니다.
+        </p>
+      </div>
+
+      <!-- Architecture -->
+      <div class="space-y-4 pt-2">
+        <h3 class="text-xl font-semibold text-teal-600">아키텍처 및 설계 (Architecture & Design)</h3>
+
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-white p-4">
+          <img
+            src="assets/architecture-healthchat.png"
+            alt="HealthChat+ System Architecture"
+            class="w-full h-auto"
+            loading="lazy"
+          />
+        </div>
+
+        <ul class="list-disc list-inside text-sm text-gray-600 space-y-1 pl-2">
+          <li><span class="font-semibold text-gray-800">Routing Service</span>가 자연어 입력을 식단·운동·감정 분석 서비스로 분기</li>
+          <li>각 분석 결과는 <span class="font-semibold">Daily Meal / Daily Exercise / Daily Emotion</span>으로 저장</li>
+          <li>일일 로그(<span class="font-semibold">Daily Log</span>)로 통합 후 <span class="font-semibold">AI Health Coach</span>가 피드백 생성</li>
+          <li>WHO·KDRI 등 문헌은 <span class="font-semibold">RAG DB</span>를 통해 근거 기반 참조</li>
+        </ul>
+      </div>
+
+      <!-- Core features -->
+      <h3 class="text-2xl font-bold text-gray-800 pt-2">핵심 기능 (Core Features)</h3>
+
+      <div class="space-y-6">
+        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-md space-y-2 glow">
+          <h4 class="text-lg font-bold text-teal-700">3.1. 자연어 기반 식단·운동·감정 통합 분석</h4>
+          <p class="text-sm text-gray-600">사용자의 일상 문장에서 AI가 핵심 건강 데이터를 추출해 DB에 구조화합니다.</p>
+          <ul class="text-sm list-inside pl-3 space-y-0.5">
+            <li class="font-semibold text-gray-800">
+              AI 추출 데이터:
+              <span class="font-normal text-gray-600">식단(음식명/영양소), 운동(종류/강도/시간), 감정(카테고리/강도)</span>
+            </li>
+          </ul>
+          <div class="mt-3 p-3 bg-white border border-dashed border-teal-300 rounded-xl text-sm text-gray-700">
+            <p class="font-bold mb-1">기술 적용 예시</p>
+            <p class="pl-2">“오늘 우울해서 초콜릿 먹고 20분 산책했어” → 감정: 우울 / 음식: 초콜릿 / 운동: 산책 20분</p>
+          </div>
+        </div>
+
+        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-md space-y-2 glow" id="evidence">
+          <h4 class="text-lg font-bold text-teal-700">3.2. 공신력 기반 AI 초개인화 건강 요약</h4>
+          <p class="text-sm text-gray-600">
+            AI 피드백을 “근거 기반”으로 구성해 신뢰도를 높였습니다. (분석 결과 + 근거/설명 + 실행 가능한 제안)
+          </p>
+          <ul class="text-sm list-inside pl-3 space-y-0.5">
+            <li class="font-semibold text-gray-800">
+              주요 참조 기준:
+              <span class="font-normal text-gray-600">WHO 운동 권장, KDCA 가이드, KDRI 등</span>
+            </li>
+          </ul>
+          <div class="mt-3 p-3 bg-white border border-dashed border-teal-300 rounded-xl text-sm text-gray-700">
+            <p class="font-bold mb-1">피드백 예시</p>
+            <p class="pl-2">“WHO 성인 권장 운동량(주 150~300분) 대비 최근 평균 운동 시간이 부족한 편입니다.”</p>
+          </div>
+
+          <div class="mt-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900">
+            <p class="font-semibold">신뢰성 설계</p>
+            <p class="mt-1 text-emerald-800">
+              근거(가이드라인/논문/기관 자료)를 “참고문헌” 형태로 노출해, AI 환각 리스크를 줄이고 사용자가 판단할 수 있게 했습니다.
+            </p>
+          </div>
+        </div>
+
+        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-md space-y-2 glow">
+          <h4 class="text-lg font-bold text-teal-700">3.3. 감정 기반 건강 트렌드 분석</h4>
+          <p class="text-sm text-gray-600">감정 데이터와 건강 데이터를 함께 보며 생활 패턴을 스스로 인지하도록 돕습니다.</p>
+          <ul class="list-disc text-sm list-inside pl-3 space-y-0.5 text-gray-600">
+            <li>스트레스/우울 등 감정 변화 ↔ 섭취/운동 변화 상관관계 탐색</li>
+            <li>대시보드에서 추세(예: 우울 점수 vs 운동 시간) 시각화</li>
+          </ul>
+        </div>
+
+        <div class="p-5 bg-gray-50 rounded-2xl border border-gray-200 shadow-md space-y-2 glow">
+          <h4 class="text-lg font-bold text-teal-700">3.4. 개인 프로필 기반 맞춤 분석</h4>
+          <p class="text-sm text-gray-600">목표/알레르기/복용약 등 사용자 맥락을 반영해 더 현실적인 코칭을 제공합니다.</p>
+          <ul class="list-disc text-sm list-inside pl-3 space-y-0.5 text-gray-600">
+            <li>목표 체중/목표에 따른 칼로리 밸런스 판단</li>
+            <li>알레르기/복용약 기반 주의 식품/습관 안내</li>
+            <li>수면 데이터와 연계한 회복/컨디션 코멘트</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshots / Demo -->
+    <section id="screens" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-10 fade-up delay-6">
+      <h2 class="section-title text-2xl font-bold text-gray-800">스크린샷 & 시연 (Screenshots / Demo)</h2>
+      <p class="text-gray-600">실제 동작 화면을 통해 사용자 경험과 핵심 기능을 확인할 수 있습니다.</p>
+
+      <div class="space-y-3">
+        <h3 class="text-lg font-semibold text-teal-700">📸 대시보드 메인 화면 (식단 · 운동 · 감정 요약)</h3>
+        <p class="text-sm text-gray-600">하루 입력 데이터를 기반으로 식단·운동·감정을 한눈에 확인할 수 있습니다.</p>
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-white">
+          <img src="assets/screenshot-dashboard.png" alt="HealthChat+ 대시보드 화면" class="w-full h-auto" loading="lazy" />
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-lg font-semibold text-teal-700">📸 AI 분석 결과 & 근거 기반 피드백</h3>
+        <p class="text-sm text-gray-600">WHO·KDRI 등 공신력 있는 기준을 근거로 한 설명을 제공합니다.</p>
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-white">
+          <img src="assets/screenshot-feedback.png" alt="AI 피드백 및 참고문헌 화면" class="w-full h-auto" loading="lazy" />
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-lg font-semibold text-teal-700">📸 자연어 입력 기반 하루 로그</h3>
+        <p class="text-sm text-gray-600">한 문장의 자연어를 AI가 자동으로 구조화하는 과정입니다.</p>
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-white">
+          <img src="assets/screenshot-input.png" alt="자연어 입력 화면" class="w-full h-auto" loading="lazy" />
+        </div>
+      </div>
+
+      <!-- Demo Video -->
+      <div class="space-y-3 pt-4">
+        <h3 class="text-lg font-semibold text-teal-700">🎬 시연 영상 (Demo Video)</h3>
+        <p class="text-sm text-gray-600">로그인 → 자연어 입력 → AI 분석 → 대시보드 확인까지의 전체 흐름을 담은 영상입니다.</p>
+
+        <div class="rounded-2xl overflow-hidden border border-gray-200 shadow-md bg-black">
+          <video class="w-full h-auto" src="assets/demo_web.mp4" controls muted playsinline preload="metadata">
+            브라우저가 video 태그를 지원하지 않습니다.
+          </video>
+        </div>
+
+        <a href="https://www.youtube.com/watch?v=QBMxtf1YZhg" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition">
+          ▶ YouTube에서 영상 열기
+        </a>
+
+        <p class="text-xs text-gray-500">
+          ※ mp4는 페이지 내에서 바로 재생되며, 재생이 어려운 환경에서는 YouTube 링크로 확인할 수 있습니다.
+        </p>
+      </div>
+
+      <!-- Links -->
+      <div class="flex flex-wrap gap-3 pt-2">
+        <a href="http://52.78.215.10/login"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-teal-600 text-white hover:bg-teal-700 transition">
+          🔗 배포 링크
+        </a>
+        <a href="https://github.com/Jeon03/healthchat-plus"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gray-900 text-white hover:bg-gray-800 transition">
+          💻 GitHub Repository
+        </a>
+      </div>
+    </section>
+
+    <!-- Results / Troubleshooting -->
+    <section id="results" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-8 fade-up delay-7">
+      <h2 class="section-title text-2xl font-bold text-gray-800">4. 기여 및 성과</h2>
+
+      <div class="space-y-3">
+        <h3 class="text-xl font-semibold text-teal-600">나의 역할 (My Role & Contribution)</h3>
+        <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600">
+          <li class="font-medium"><span class="text-teal-700">풀스택 리더십:</span> FE/BE 전체 설계 및 구현 주도</li>
+          <li class="font-medium"><span class="text-teal-700">AI 엔지니어링:</span> Gemini 기반 파싱/정형화 파이프라인 구현</li>
+          <li class="font-medium"><span class="text-teal-700">신뢰 설계:</span> 근거 기반 피드백 구조 + 참고문헌 노출 UX</li>
+          <li class="font-medium"><span class="text-teal-700">데이터 모델링:</span> 식단/운동/감정/일일로그 스키마 설계</li>
+          <li class="font-medium"><span class="text-teal-700">대시보드 UX:</span> 시각화/상세 모달/상호작용 UI 구성</li>
+        </ul>
+      </div>
+
+      <div class="space-y-3 pt-2">
+        <h3 class="text-xl font-semibold text-teal-600">결과 및 성과 (Results & Achievements)</h3>
+        <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600 font-medium">
+          <li>식단·운동·감정 통합 분석 파이프라인 자동화</li>
+          <li>근거 기반 피드백(참고문헌)으로 신뢰도/설명력 강화</li>
+          <li>자연어 입력 UX로 기록 허들을 낮추는 사용자 경험 설계</li>
+        </ul>
+      </div>
+
+      <!-- Troubleshooting -->
+      <div id="trouble" class="space-y-3 pt-4">
+        <h3 class="text-xl font-semibold text-teal-600">트러블슈팅 (Troubleshooting)</h3>
+
+        <div class="grid grid-cols-1 gap-4">
+          <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+            <p class="text-sm font-bold text-gray-800">1) LLM 호출 실패 및 비정형 응답 문제</p>
+            <p class="text-sm text-gray-600 mt-1">
+              LLM 호출 시 JSON 형식이 깨지거나 불완전한 응답이 발생했습니다.
+              프롬프트를 <b>역할·출력 형식 중심으로 단순화</b>하고,
+              <b>fallback 처리 및 원문 로그</b>를 추가해 안정성을 확보했습니다.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+            <p class="text-sm font-bold text-gray-800">2) LLM 응답 속도 지연 및 비용 문제</p>
+            <p class="text-sm text-gray-600 mt-1">
+              단일 요청에 과도한 분석을 포함해 응답 시간이 길어지는 문제가 있었습니다.
+              이를 해결하기 위해 <b>식단·운동·감정 라우팅 구조</b>로 분리하고,
+              프롬프트를 최소화하여 <b>속도와 비용을 함께 최적화</b>했습니다.
+            </p>
+          </div>
+
+          <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+            <p class="text-sm font-bold text-gray-800">3) 프롬프트 설계에 따른 분석 일관성 문제</p>
+            <p class="text-sm text-gray-600 mt-1">
+              프롬프트 표현에 따라 분석 결과가 달라지는 문제가 있어,
+              출력 필드를 명시한 <b>구조화 프롬프트(JSON 스키마)</b>를 적용했습니다.
+              결과 일관성이 향상되고 후처리 로직이 단순화되었습니다.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Retrospective -->
+      <div class="space-y-4 pt-4">
+        <h3 class="text-xl font-semibold text-teal-600">회고 및 학습 (Retrospective)</h3>
+
+        <div class="border border-gray-100 rounded-xl overflow-hidden">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">분류</th>
+                <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">주요 학습 내용</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">AI 설계</td>
+                <td class="px-4 py-3 text-sm text-gray-600">분석 결과에 <span class="text-teal-600 font-semibold">근거를 연결</span>하는 설계의 중요성과 구현 경험</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">안정성</td>
+                <td class="px-4 py-3 text-sm text-gray-600">LLM 형식 오류/누락에 대비한 fallback 및 로깅 중심 안정화 경험</td>
+              </tr>
+              <tr>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">풀스택</td>
+                <td class="px-4 py-3 text-sm text-gray-600">FE/BE 데이터 계약(DTO)과 배포 환경(EC2+Docker)까지 end-to-end로 다룬 경험</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pt-2">
+          <h4 class="text-lg font-semibold text-red-500">개선점 (Future Work)</h4>
+          <ul class="list-disc list-inside space-y-1.5 pl-3 text-gray-600">
+            <li>피드백 엔진을 더 세밀한 기준/상황별 로직으로 고도화</li>
+            <li>감정 분석 카테고리/강도 스코어링 정교화</li>
+            <li>선제적 추천(상황 감지 후 행동 제안) 기능 확장</li>
+            <li>주/월 리포트(통계) 기능 추가 및 데이터셋 기반 재현성 강화</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 사용자 및 평가 결과 -->
+    <section id="evaluation" class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl space-y-4 fade-up">
+      <h2 class="section-title text-2xl font-bold text-gray-800">사용자 및 평가 결과</h2>
+
+      <div class="p-4 rounded-2xl border border-gray-200 bg-gray-50">
+        <p class="text-sm text-gray-700">
+          테스트 사용자 <b>확보는 완료</b>했지만, 일정상의 이유로
+          <b>평가 데이터(설문/통계) 수집까지는 진행하지 못했습니다.</b>
+        </p>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-gray-500 text-sm">
+      <p>&copy; HealthChat+ Project Detail</p>
+      <p class="no-print mt-2">
+        <a class="text-teal-700 hover:text-teal-800 underline" href="#about">맨 위로</a>
+      </p>
+    </footer>
+
+  </div>
 </body>
 </html>
